@@ -33,6 +33,7 @@ Section Partition.
   (* splits hm according to hash n *)
   Definition partitionate (n : nat) (hm : hash_map) :=
     (filter (eq_hash n) hm, filter (negb \o eq_hash n) hm).
+                                                                                                                                                                                                                                                                                                                                                                                                                                 
   Equations? gen_partition (hm : hash_map) : partition by wf (size hm) lt :=
     gen_partition nil := nil;
     gen_partition (bn::l) :=
@@ -203,9 +204,8 @@ Section Template.
   Hypothesis nat_inj : nat -> B.
   Hypothesis nat_inj_ : injective nat_inj.
 
-  (* comparison on graphs, morally an order relation.
-     TODO : we can relax all assumptions on cmp/choose_graph to the relabelling of
-     the graph to be canonized, is it relevant? *)
+  (* comparison on graphs, morally an order relation. *)
+
   Variable (cmp : seq (triple I B L) -> seq (triple I B L) -> bool).
 
   Hypothesis cmp_anti : antisymmetric cmp.
@@ -281,10 +281,14 @@ Section Template.
      - elements of p have the same hash
      - p is non empty and non singleton *)
   Variable choose_part : hash_map -> part.
-  (* all nodes in choose_part hm lead to bnodes of hm, but with possibly changed hashes.
-     remember the list of bnodes of a graph is unique *)
+  (* all nodes in choose_part hm lead to bnodes of hm. NOTE that the assumption does not prevent choose_part from duplicating elements. *)
   Hypothesis in_part_in_bnodes' :
     forall (bn : B * nat) hm, bn \in choose_part hm -> bn \in hm.
+
+  (* TODO : change into ... != [::] *)
+  Hypothesis choose_from_not_fine :
+    forall (hm : hash_map),
+      ~~ is_fine (gen_partition hm) -> choose_part hm == [::] = false.
 
   Lemma in_part_in_bnodes (bn : B * nat) hm: bn \in choose_part hm -> bn.1 \in bnodes_hm hm.
   Proof.
@@ -307,6 +311,15 @@ Section Template.
     forall (g : seq (triple I B L)) hm,
       bnodes_hm hm =i get_bts g -> bnodes_hm (color_refine g hm) =i get_bts g.
 
+  (* Spec of a good color function *)
+  Hypothesis iso_color_fine :
+      forall (g h : seq (triple I B L)),
+        uniq g -> uniq h ->
+          effective_iso_ts g h ->
+            is_fine (gen_partition (color g (init_hash g)))
+            = is_fine (gen_partition (color h (init_hash h))).
+
+
   (* Marks a bnode in a hashmap*)
   Variable (mark : B -> hash_map -> hash_map).
   (* Marking a hashmap with one of its bnodes does not change its bnodes (but only the hashes)*)
@@ -327,10 +340,11 @@ Section Template.
     forall (bn : B * nat) (hm : hash_map),
       (* TODO: add this hypothesis *)
       (* ~~ is_fine (gen_partition hm) -> *)
+      (* uniq (bnodes_hm hm) ->*)
       bn \in choose_part hm -> M (mark bn.1 hm) < M hm.
   (* color_refine does not increase the measure *)
   Hypothesis color_refineP :
-    forall (g : seq (triple I B L)) (hm : hash_map) ,
+    forall (g : seq (triple I B L)) (hm : hash_map),
       M (color_refine g hm) <= M hm.
 
   Local Notation eq_hash := (@eq_hash B).
@@ -344,13 +358,18 @@ Section Template.
       else
         b.
 
-  Hypothesis iso_color_fine_can :
+Coercion fun_of_hash_map : hash_map >-> Funclass.
+
+
+Hypothesis iso_color_fine_can :
     forall (g h : seq (triple I B L)),
       uniq g -> uniq h ->
       effective_iso_ts g h ->
-         relabeling_seq_triple (fun_of_hash_map (color g (init_hash g))) g
-      =i relabeling_seq_triple (fun_of_hash_map (color h (init_hash h))) h.
+         relabeling_seq_triple (color g (init_hash g)) g
+      =i relabeling_seq_triple (color h (init_hash h)) h.
 
+
+      
   Lemma nat_coq_nat (n m : nat) :  (n < m)%nat = (n < m). Proof. by []. Qed.
   Lemma nat_coq_le_nat (n m : nat) :  (n <= m)%N = (n <= m). Proof. by []. Qed.
 
@@ -470,11 +489,11 @@ Section Template.
     Lemma part_in_partition (n : nat) (hm : hash_map) :
       n \in (hashes_hm hm) -> (partitionate n hm).1 \in gen_partition hm.
     Proof.
-    have : size hm < S (size hm) by apply ltnSn.
+    have : size hm < (size hm).+1 by apply ltnSn.
     move: hm (size hm).+1.
     move=> hm n1; move: n1 hm=> n1.
     elim: n1 => [//| n1 IHn hm].
-    case hm=> //p tl/=.
+    case: hm=> //p tl/=. 
     rewrite -nat_coq_nat ltnS nat_coq_nat=> measure.
     rewrite in_cons=> /orP[/eqP eq_np|].
     + rewrite eq_np/eq_hash/pred_eq eqxx.
@@ -518,7 +537,7 @@ Section Template.
             exists 0; first by rewrite size_drop subn_gt0; rewrite size_map in j_in.
             by rewrite nth_drop addn0 nthj eq_xij /eq_hash/=/pred_eq eqxx.
           rewrite -has_count; apply /(has_nthP (b,0)).
-          exists i.
+          exists i. 
           + rewrite size_take_min ltn_min; apply /andP; split; first exact: lt_ij.
             by rewrite size_map in j_in; apply (ltn_trans lt_ij j_in).
           by rewrite nth_take // nth_i /eq_hash/=/pred_eq eqxx.
@@ -601,6 +620,7 @@ Section Template.
     by rewrite map_inj_in_uniq=> //; apply inj_get_bts_inj_ts.
     Qed.
 
+(*TODO : merge distinguish__ and distinguish by gbot <- can *)
     Equations? distinguish__
       (g : seq (triple I B L))
         (hm : hash_map)
@@ -650,7 +670,7 @@ Section Template.
       (bn : (B * nat)) :=
 	      let hm' := color_refine g (mark bn.1 hm) in
 	      if is_fine (gen_partition hm') then
-	        let candidate := sort le_triple (relabeling_seq_triple (fun_of_hash_map hm') g) in
+	        let candidate := sort le_triple (relabeling_seq_triple (fun_of_hash_map hm') g) in (* TODO simplfy let *)
 	        candidate
 	      else (distinguish g hm').
 
@@ -851,10 +871,7 @@ Section Template.
     by move=> y yin; apply cmp_in; rewrite in_cons yin orbT.
     Qed.
 
-    Hypothesis choose_from_not_fine :
-      forall (hm : hash_map),
-        ~~ is_fine (gen_partition hm) -> choose_part hm == [::] = false.
-
+        (* This is where we use the fact that can is nil *)
     Lemma nil_is_nil (g : seq (triple I B L)) (hm : hash_map):
       bnodes_hm hm =i get_bts g ->
       ~~ is_fine (gen_partition hm) ->
@@ -948,13 +965,7 @@ Section Template.
     by apply preiso_out_template.
     Qed.
 
-    Hypothesis iso_color_fine :
-      forall (g h : seq (triple I B L)),
-        uniq g -> uniq h ->
-          effective_iso_ts g h ->
-            is_fine (gen_partition (color g (init_hash g)))
-            = is_fine (gen_partition (color h (init_hash h))).
-
+    
     (* Hypothesis distinguish_complete : *)
     (*   forall (g h : seq (triple I B L)), *)
     (*     uniq g -> uniq h -> *)
@@ -962,14 +973,59 @@ Section Template.
     (*         is_fine (gen_partition (color g (init_hash g))) = false -> *)
     (*           distinguish g (color g (init_hash g)) =i distinguish h (color h (init_hash h)). *)
 
-    Hypothesis eiso_mem_eq_canonicalize :
-      forall (g h : seq (triple I B L)) (ug: uniq g) (uh: uniq h),
-        effective_iso_ts g h ->
-          is_fine (gen_partition (color g (init_hash g))) = false ->
-            map (canonicalize g (color g (init_hash g))) (choose_part (color g (init_hash g)))
-            =i map (canonicalize h (color h (init_hash h))) (choose_part (color h (init_hash h))).
 
-    Lemma eiso_correct_complete (g h : seq (triple I B L)) (ug: uniq g) (uh: uniq h) :
+    (* Hypothesis eiso_mem_eq_canonicalize :
+    forall (g h : seq (triple I B L)) (ug: uniq g) (uh: uniq h),
+      effective_iso_ts g h ->
+      let color_g := color g (init_hash g) in 
+      let color_h := color h (init_hash h) in 
+        ~~ is_fine (gen_partition color_g) ->
+          map (canonicalize g color_g) (choose_part color_g)
+          =i map (canonicalize h color_h) (choose_part color_h). *)
+          
+Lemma eiso_mem_eq_canonicalize (g h : seq (triple I B L)) (ug: uniq g) (uh: uniq h) :
+            effective_iso_ts g h ->
+              is_fine (gen_partition (color g (init_hash g))) = false ->
+                map (canonicalize g (color g (init_hash g))) (choose_part (color g (init_hash g)))
+                =i map (canonicalize h (color h (init_hash h))) (choose_part (color h (init_hash h))).
+Proof.
+move=> iso_gh.
+set col_g := color g _.
+set col_h := color h _.
+set can_g := canonicalize g _.
+set can_h := canonicalize h _.
+move=> Nfine_g.
+case: iso_gh => mu iso_mu.
+pose hmap (mu : B -> B) (h : hash_map) := (*improve and pull out*)
+  zip (map mu (map fst h)) (map snd h).
+suffices : 
+  [seq can_g i | i <- choose_part col_g] =i [seq can_h i | i <- choose_part (hmap mu col_g)] by admit.
+suffices :
+  [seq can_g i | i <- choose_part col_g] =i [seq can_h i | i <-  hmap mu (choose_part col_g)] by admit.
+suffices :
+  [seq can_g i | i <- choose_part col_g] =i [seq ((can_h) \o (fun p => (mu p.1, p.2))) i | i <-  choose_part col_g] by admit.
+suffices -> :
+  [seq can_g i | i <- choose_part col_g] = [seq ((can_h) \o (fun p => (mu p.1, p.2))) i | i <-  choose_part col_g] by [].
+suffices step b : b \in choose_part col_g -> can_g b = can_h (mu b.1, b.2) by apply/eq_in_map.
+  rewrite /can_g /can_h /canonicalize => hb /=.
+set test_g := is_fine _.
+set test_h := is_fine _.
+have -> : test_h = test_g by admit.
+case: ifP => [htest | hNtest].
+- admit.
+- set hh := mark _ _.
+Admitted.
+
+(*
+Hypothesis eiso_mem_eq_canonicalize :
+          forall (g h : seq (triple I B L)) (ug: uniq g) (uh: uniq h),
+            effective_iso_ts g h ->
+              is_fine (gen_partition (color g (init_hash g))) = false ->
+                map (canonicalize g (color g (init_hash g))) (choose_part (color g (init_hash g)))
+                =i map (canonicalize h (color h (init_hash h))) (choose_part (color h (init_hash h))).
+*)    
+
+Lemma eiso_correct_complete (g h : seq (triple I B L)) (ug: uniq g) (uh: uniq h) :
       effective_iso_ts g h <-> (template g) == (template h).
     Proof.
     split; last first.
@@ -1162,12 +1218,12 @@ Section kmap_template.
   by rewrite mark_hash_kmap_bnodes //; apply mem_eq.
   Qed.
 
-  Definition template_isocan__ := @template_isocan_
+  (* Definition template_isocan__ := @template_isocan_
                                     init_hash_kmap good_init_kmap choose_part_kmap in_part_in_bnodes_kmap
                                     color_kmap color_refine_kmap color_good_hm_kmap color_refine_good_hm_kmap
                                     mark_kmap_2 good_mark_kmap M_kmap.
 
-  Check template_isocan__.
+  Check template_isocan__. *)
 
   Lemma mark_size (b : B) (hm : hash_map B) :
     b \in (bnodes_hm hm) ->
