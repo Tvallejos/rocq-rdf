@@ -347,8 +347,8 @@ Section Template.
     forall (g : seq (triple I B L)) (hm : hash_map),
       M (color_refine g hm) <= M hm.
 
-  Local Notation eq_hash := (@eq_hash B).
-  Local Notation eq_bnode := (@eq_bnode B).
+  Arguments eq_hash {B} _ _.
+  Arguments eq_bnode {B} _ _.
 
   Definition fun_of_hash_map (hm : hash_map) : B -> B :=
     fun b =>
@@ -368,8 +368,6 @@ Hypothesis iso_color_fine_can :
          relabeling_seq_triple (color g (init_hash g)) g
       =i relabeling_seq_triple (color h (init_hash h)) h.
 
-
-      
   Lemma nat_coq_nat (n m : nat) :  (n < m)%nat = (n < m). Proof. by []. Qed.
   Lemma nat_coq_le_nat (n m : nat) :  (n <= m)%N = (n <= m). Proof. by []. Qed.
 
@@ -413,7 +411,7 @@ Hypothesis iso_color_fine_can :
     by case =>  [//| b l2] /= [eqsize_tl]; rewrite eq_sym IHl //.
     Qed.
 
-    Lemma find_index_eq_hash bs s (bn : nat) :
+    Lemma find_index_eq_hash (bs: seq B) (s: seq nat) (bn : nat) :
       size s = size bs ->
       find (eq_hash bn) (zip bs s) = index bn s.
     Proof.
@@ -537,7 +535,7 @@ Hypothesis iso_color_fine_can :
             exists 0; first by rewrite size_drop subn_gt0; rewrite size_map in j_in.
             by rewrite nth_drop addn0 nthj eq_xij /eq_hash/=/pred_eq eqxx.
           rewrite -has_count; apply /(has_nthP (b,0)).
-          exists i. 
+          exists i.
           + rewrite size_take_min ltn_min; apply /andP; split; first exact: lt_ij.
             by rewrite size_map in j_in; apply (ltn_trans lt_ij j_in).
           by rewrite nth_take // nth_i /eq_hash/=/pred_eq eqxx.
@@ -593,8 +591,8 @@ Hypothesis iso_color_fine_can :
     rewrite hasb hasb' => /nat_inj_.
     have eqsize: size [seq i.2 | i <- hm] = size [seq i.1 | i <- hm] by apply size_proj.
     rewrite (hm_zip hm) !find_index_eq_bnode // -!hm_zip /eqP.
-    have [n nin]:= bnodes_hm_exists hm b bin.
-    have [n' n'in]:= bnodes_hm_exists hm b' b'in.
+    have /=[n nin]:= bnodes_hm_exists hm b bin.
+    have /=[n' n'in]:= bnodes_hm_exists hm b' b'in.
     suffices [inb inb'] :
       (index b [seq i.1 | i <- hm] < size hm)%N /\ (index b' [seq i.1 | i <- hm] < size hm)%N.
       rewrite (nth_map (b,O)) // (nth_map (b',O)) //.
@@ -1014,6 +1012,20 @@ have -> : test_h = test_g by admit.
 case: ifP => [htest | hNtest].
 - admit.
 - set hh := mark _ _.
+  have peq_mark : forall b (hm p: hash_map), perm_eq hm p -> perm_eq (mark b hm) (mark b p). by admit.
+  have peq_color_refine : forall g (hm p: hash_map), perm_eq hm p -> perm_eq (color_refine g hm) (color_refine g p). by admit.
+  have /peq_mark/peq_color_refine : perm_eq col_h (hmap mu col_g). by admit.
+  move=> /(_ h (mu b.1)).
+  have peq_hm_distinguish : forall (hm p : hash_map) g, perm_eq hm p -> distinguish g hm = distinguish g p. by admit.
+  move=> /(peq_hm_distinguish _ _ h) ->.
+  have peq_graph_distinguish : forall (hm : hash_map) (g h : seq (triple I B L)),
+    perm_eq g h -> distinguish g hm = distinguish h hm. by admit.
+  case: iso_mu=> /and3P[piso urel peq].
+  have peq_graph_color_refine: forall (hm: hash_map) g h, perm_eq g h -> perm_eq (color_refine g hm) (color_refine h hm). by admit.
+  set mk_mu := mark (mu _) _.
+  have /(peq_hm_distinguish _ _ h) <- := peq_graph_color_refine mk_mu _ _ peq.
+  rewrite -(peq_graph_distinguish _ _ h peq) /mk_mu /hh.
+
 Admitted.
 
 (*
