@@ -214,11 +214,11 @@ Section Rdf.
       Lemma perm_eq_relab_uniq g1 g2 mu : perm_eq (relabeling_seq_triple mu g1) g2 -> perm_eq (relabeling_seq_triple mu g1) g2 /\ uniq (relabeling_seq_triple mu g1).
       Proof. by apply perm_eq_relab_uniq_ts. Qed.
 
-      Lemma relabeling_triple_comp_map (B1 B2 B3 : eqType) (g : rdf_graph I B1 L) (mu12 : B1 -> B2) (mu23 : B2 -> B3) :
-        [seq relabeling_triple mu23 i | i <- relabeling_seq_triple mu12 g] =
-          relabeling_seq_triple (mu23 \o mu12) g.
-      Proof. case g=> g' us=> /=; rewrite -map_comp.
-             by elim g'=> [//| h t IHts] /=; last by rewrite relabeling_triple_comp -IHts.
+      Lemma relabeling_triple_comp_map (B1 B2 B3 : eqType) (ts : seq (triple I B1 L)) (mu12 : B1 -> B2) (mu23 : B2 -> B3) :
+        [seq relabeling_triple mu23 i | i <- relabeling_seq_triple mu12 ts] =
+          relabeling_seq_triple (mu23 \o mu12) ts.
+      Proof. rewrite -map_comp.
+             by elim ts=> [//| h t IHts] /=; last by rewrite relabeling_triple_comp -IHts.
       Qed.
 
       Lemma perm_eq_comp ts1 ts2 ts3 mu12 mu23:

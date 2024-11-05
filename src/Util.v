@@ -557,3 +557,9 @@ Lemma zip_uniq_proj (T1 T2 : eqType) (s1 : seq T1) (s2 : seq T2) :
   by congr cons; rewrite IHtl //; move: eq_size=> /=[->].
   Qed.
 
+  Lemma map_fst_zip_size (T U: Type) (s1 : seq T) (s2 : seq U) :
+    size s1 = size s2 -> map fst (zip s1 s2) = s1.
+  Proof.
+  elim: s2 s1=> [//|hd tl IHtl] [//|// a tla] eq_size /=.
+  by congr cons; rewrite IHtl //; move: eq_size=> /=[->].
+  Qed.
