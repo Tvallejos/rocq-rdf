@@ -1100,11 +1100,10 @@ Hypothesis iso_color_fine_can :
         perm_eq p hm -> forall (g : seq (triple I B L)), perm_eq (color g hm) (color g p).
     Hypothesis init_hash_perm_graph : forall (g h : seq (triple I B L)), perm_eq g h -> perm_eq (init_hash g) (init_hash h).
     Hypothesis choose_part_post_relabeling : forall (hm: hash_map)(mu : B -> B), choose_part (map1 mu hm) = map1 mu (choose_part hm).
-    (* admit. (* new hypothesis *) *)
+    Hypothesis color_refine_perm_hm : forall (g : seq (triple I B L)) (hm p: hash_map), perm_eq hm p -> perm_eq (color_refine g hm) (color_refine g p).
 
     (*not yet used*)
     (* have peq_mark : forall b (hm p: hash_map), perm_eq hm p -> perm_eq (mark b hm) (mark b p). by admit. (* has to be an hypothesis *) *)
-    Hypothesis color_refine_perm_hm : forall (g : seq (triple I B L)) (hm p: hash_map), perm_eq hm p -> perm_eq (color_refine g hm) (color_refine g p).
     (* have peq_hm_distinguish : forall (hm p : hash_map) g, perm_eq hm p -> distinguish g hm = distinguish g p. by admit. (* has to be an hypothesis *) *)
     (* have peq_graph_distinguish : forall (hm : hash_map) (g h : seq (triple I B L)), *)
     (*     perm_eq g h -> distinguish g hm = distinguish h hm. by admit. (* has to be an hypothesis *) *)
@@ -1198,10 +1197,23 @@ suffices step b : b \in choose_part col_g -> can_g b = can_h (mu b.1, b.2) by ap
            {in (bnodes_hm hm)&, injective mu} ->
            perm_eq (mark (mu b) (map1 mu hm)) (map1 mu (mark b hm)).
        admit.
+       rewrite perm_sym.
+       apply H3.
+       move=> b1 b2.
+       rewrite (color_good_hm).
+       rewrite (color_good_hm).
+       by apply mu_inj.
+       by apply good_init.
+       by apply good_init.
+     apply color_refine_perm_hm.
+     have H4 : forall (b : B) (hm p : hash_map), perm_eq hm p -> perm_eq (mark b hm) (mark b p).
+     admit.
+     apply H4.
+     by rewrite perm_sym peq_col.
 
 
 (* have  *)
-rewrite perm_hash_eq_fine.
+(* rewrite perm_hash_eq_fine. *)
 
 
 
