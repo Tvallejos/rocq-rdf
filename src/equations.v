@@ -1076,9 +1076,40 @@ Hypothesis iso_color_fine_can :
     Qed.
 
     Lemma hashes_of_map1 (hm : hash_map) (mu : B -> B):
-      map snd (map1 mu hm) = map snd hm.
+      (* map snd (map1 mu hm) = map snd hm. *)
+      hashes_hm (map1 mu hm) = hashes_hm hm.
     Proof. by elim: hm=> [//|hd tl /= ->]. Qed.
 
+    Lemma map1_map (mu : B -> B):
+      (map1 mu) =1 (map (fun p=> (mu p.1,p.2))).
+    Proof.
+    move=> hm; elim: hm=> [//|[b n] tl IHtl] /=.
+    by rewrite /map1/= -IHtl.
+    Qed.
+(* Hypothesis for following lemma  *)
+    (* you can postpone a relabeling and this won't affect color *)
+    Hypothesis color_post_relabeling : forall (g : seq (triple I B L)) (mu : B -> B) (hm : hash_map),
+      {in (get_bts g)&, injective mu} ->
+        {in (bnodes_hm hm)&, injective mu} ->
+          perm_eq (color (relabeling_seq_triple mu g) (map1 mu hm)) (map1 mu (color g hm)).
+    Hypothesis color_perm_graph : forall (g h : seq (triple I B L)) (hm : hash_map),
+        perm_eq g h -> perm_eq (color g hm) (color h hm).
+    Hypothesis init_hash_inj_rel : forall (g : seq (triple I B L)) (mu: B -> B),
+        {in (get_bts g)&, injective mu} -> perm_eq (map1 mu (init_hash g)) (init_hash (relabeling_seq_triple mu g)).
+    Hypothesis color_perm_hm : forall (hm p : hash_map),
+        perm_eq p hm -> forall (g : seq (triple I B L)), perm_eq (color g hm) (color g p).
+    Hypothesis init_hash_perm_graph : forall (g h : seq (triple I B L)), perm_eq g h -> perm_eq (init_hash g) (init_hash h).
+    Hypothesis choose_part_post_relabeling : forall (hm: hash_map)(mu : B -> B), choose_part (map1 mu hm) = map1 mu (choose_part hm).
+    (* admit. (* new hypothesis *) *)
+
+    (*not yet used*)
+    (* have peq_mark : forall b (hm p: hash_map), perm_eq hm p -> perm_eq (mark b hm) (mark b p). by admit. (* has to be an hypothesis *) *)
+    Hypothesis color_refine_perm_hm : forall (g : seq (triple I B L)) (hm p: hash_map), perm_eq hm p -> perm_eq (color_refine g hm) (color_refine g p).
+    (* have peq_hm_distinguish : forall (hm p : hash_map) g, perm_eq hm p -> distinguish g hm = distinguish g p. by admit. (* has to be an hypothesis *) *)
+    (* have peq_graph_distinguish : forall (hm : hash_map) (g h : seq (triple I B L)), *)
+    (*     perm_eq g h -> distinguish g hm = distinguish h hm. by admit. (* has to be an hypothesis *) *)
+    (* have peq_graph_color_refine: forall (hm: hash_map) g h, perm_eq g h -> perm_eq (color_refine g hm) (color_refine h hm). by admit. (* has to be an hypothesis *) *)
+    (* End of hypothesis for following lemma*)
 Lemma eiso_mem_eq_canonicalize (g h : seq (triple I B L)) (ug: uniq g) (uh: uniq h) :
             effective_iso_ts g h ->
               is_fine (gen_partition (color g (init_hash g))) = false ->
@@ -1092,43 +1123,90 @@ set can_g := canonicalize g _.
 set can_h := canonicalize h _.
 move=> Nfine_g.
 case: iso_gh => mu iso_mu.
-have peq_mark : forall b (hm p: hash_map), perm_eq hm p -> perm_eq (mark b hm) (mark b p). by admit. (* has to be an hypothesis *)
-have peq_color_refine : forall g (hm p: hash_map), perm_eq hm p -> perm_eq (color_refine g hm) (color_refine g p). by admit. (* has to be an hypothesis *)
-have peq_hm_distinguish : forall (hm p : hash_map) g, perm_eq hm p -> distinguish g hm = distinguish g p. by admit. (* has to be an hypothesis *)
-have peq_graph_distinguish : forall (hm : hash_map) (g h : seq (triple I B L)),
-    perm_eq g h -> distinguish g hm = distinguish h hm. by admit. (* has to be an hypothesis *)
-have peq_graph_color_refine: forall (hm: hash_map) g h, perm_eq g h -> perm_eq (color_refine g hm) (color_refine h hm). by admit. (* has to be an hypothesis *)
 move=> /= c.
+move: iso_mu=> /and3P[piso urel peq].
+have mu_inj := is_pre_iso_ts_inj piso.
+have peq_col : perm_eq col_h (map1 mu col_g).
+  suffices step : (perm_eq col_h (color h (init_hash (relabeling_seq_triple mu g)))).
+    apply: (perm_trans step).
+    suffices step2 : (perm_eq (color h (init_hash (relabeling_seq_triple mu g))) (color h (map1 mu (init_hash g)))).
+      apply: (perm_trans step2).
+      suffices step3 : (perm_eq (color h (map1 mu (init_hash g))) (color (relabeling_seq_triple mu g) (map1 mu (init_hash g)))).
+        apply: (perm_trans step3).
+        suffices step4 : (perm_eq (color (relabeling_seq_triple mu g) (map1 mu (init_hash g))) (map1 mu (color g (init_hash g)))).
+          by apply: (perm_trans step4 (perm_refl _)).
+        apply: color_post_relabeling=> //.
+        by move=> b bin; rewrite !good_init; apply mu_inj.
+      by apply color_perm_graph; rewrite perm_sym peq.
+    by apply: (color_perm_hm _ _ (init_hash_inj_rel g mu_inj)).
+  by apply color_perm_hm; apply init_hash_perm_graph.
 have -> : [seq can_h i | i <- choose_part col_h] =i [seq can_h i | i <- choose_part (map1 mu col_g)].
-  apply eq_mem_map.
-  apply perm_mem.
-  apply choose_part_order.
-  have : good_hash_map_for g (col_g). by apply color_inv ; apply color_init_inv.
-  move: iso_mu=> /and3P[piso urel peq].
-  have mu_inj := is_pre_iso_ts_inj piso.
-  rewrite /good_hash_map_for=> /(_ mu mu_inj) eq_in.
-  have ucolg1 : uniq (bnodes_hm (map1 mu col_g)). admit. (* needs to strengthen the hypothesis connecting the bnodes of a graph with the the bnodes in color \o init hash *)
-  have ucolh1 : uniq (bnodes_hm col_h). admit. (* same as above *)
-  (* one can prove this by mapping the hash_map on the blank nodes of the hash_map *)
-  rewrite -!nth_hash //.
-  rewrite hashes_of_map1.
-
-  admit.
-(* suffices : *)
-(*   [seq can_g i | i <- choose_part col_g] =i [seq can_h i | i <- choose_part (map1 mu col_g)] by admit. *)
-suffices :
-  [seq can_g i | i <- choose_part col_g] =i [seq can_h i | i <-  map1 mu (choose_part col_g)] by admit.
-suffices :
-  [seq can_g i | i <- choose_part col_g] =i [seq ((can_h) \o (fun p => (mu p.1, p.2))) i | i <-  choose_part col_g] by admit.
+  apply eq_mem_map; apply perm_mem.
+  by apply choose_part_order; apply perm_map.
+  (* have ucolg1 : uniq (bnodes_hm (map1 mu col_g)). admit. (* needs to strengthen the hypothesis connecting the bnodes of a graph with the the bnodes in color \o init hash *) *)
+  (* have ucolh1 : uniq (bnodes_hm col_h). admit. (* same as above *) *)
+rewrite choose_part_post_relabeling map1_map -map_comp.
 suffices -> :
   [seq can_g i | i <- choose_part col_g] = [seq ((can_h) \o (fun p => (mu p.1, p.2))) i | i <-  choose_part col_g] by [].
 suffices step b : b \in choose_part col_g -> can_g b = can_h (mu b.1, b.2) by apply/eq_in_map.
   rewrite /can_g /can_h /canonicalize => hb /=.
-set test_g := is_fine _.
-set test_h := is_fine _.
-have -> : test_h = test_g by admit.
+  set hmg := (X in is_fine (gen_partition X)).
+  set test_g := is_fine _.
+  set hmh := (X in is_fine (gen_partition X)).
+  set test_h := is_fine _.
+  have -> : test_h = test_g.
+    have perm_hash_eq_fine: forall (hm p : hash_map),
+      perm_eq (hashes_hm hm) (hashes_hm p) -> is_fine (gen_partition hm) = is_fine (gen_partition p).
+   admit.
+   suffices /perm_hash_eq_fine : (perm_eq (hashes_hm hmg) (hashes_hm hmh)).
+     by rewrite /test_g => ->.
+   rewrite /hmh.
+   rewrite -(hashes_of_map1 hmg mu).
+   apply perm_map.
+   suffices step1 : perm_eq (color_refine h (mark (mu b.1) (map1 mu col_g))) hmh.
+     apply: (perm_trans _ step1).
+     suffices step2: perm_eq (color_refine h (map1 mu (mark b.1 col_g))) (color_refine h (mark (mu b.1) (map1 mu col_g))).
+       apply: (perm_trans _ step2).
+       suffices step3: perm_eq (color_refine (relabeling_seq_triple mu g) (map1 mu (mark b.1 col_g))) (color_refine h (map1 mu (mark b.1 col_g))).
+         apply: (perm_trans _ step3).
+         have H1 : forall (g : seq (triple I B L)) (hm : hash_map) (mu : B -> B),
+             (* maybe also needs bnodes_hm hm =i get_bts g *)
+             {in (get_bts g)&, injective mu} ->
+             {in (bnodes_hm hm)&, injective mu} ->
+             perm_eq (color_refine (relabeling_seq_triple mu g) (map1 mu hm))
+                     (map1 mu (color_refine g hm)).
+         admit. (* new hypothesis *)
+         have mu_inj_mhm: {in bnodes_hm (mark b.1 col_g) &, injective mu}.
+          move=> b1 b2.
+          rewrite (good_mark g).
+          rewrite (good_mark g).
+          apply mu_inj.
+          apply color_good_hm.
+          apply good_init.
+          by apply in_part_in_bnodes.
+          apply color_good_hm.
+          apply good_init.
+          by apply in_part_in_bnodes.
+         have := H1 g (mark b.1 col_g) mu mu_inj mu_inj_mhm.
+         rewrite {1}perm_sym=> step4.
+         by apply: (perm_trans _ step4).
+       have H2 : forall (g h: seq (triple I B L)) (hm : hash_map), perm_eq g h -> perm_eq (color_refine g hm) (color_refine h hm).
+       admit.
+       by apply H2.
+       apply color_refine_perm_hm.
+       have H3: forall (b : B) (hm : hash_map) (mu : B -> B),
+           {in (bnodes_hm hm)&, injective mu} ->
+           perm_eq (mark (mu b) (map1 mu hm)) (map1 mu (mark b hm)).
+       admit.
+
+
+(* have  *)
+rewrite perm_hash_eq_fine.
+
+
+
 case: ifP => [htest | hNtest].
-- admit.
+- apply /rdf_leP.
 - set hh := mark _ _.
   have /peq_mark/peq_color_refine : perm_eq col_h (map1 mu col_g). by admit.
   move=> /(_ h (mu b.1)).
