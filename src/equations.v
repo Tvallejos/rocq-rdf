@@ -191,6 +191,159 @@ Section Partition.
   Definition hashes_hm (hm : hash_map): seq nat :=
     map snd hm.
 
+  Definition mult1 {T : eqType} (s : seq T) (t : T) :=
+    count_mem t s == 1.
+
+  Definition num_uniq_hash (hm : hash_map) :=
+    count (mult1 (hashes_hm hm)) (hashes_hm hm).
+
+  Lemma hashes_hm_cat (hm1 hm2 : hash_map):
+    hashes_hm (hm1 ++ hm2) = hashes_hm hm1 ++ hashes_hm hm2.
+  Proof. exact: map_cat. Qed.
+
+  Lemma num_uniq_hash_cat (hm1 hm2 hm3 : hash_map) :
+    perm_eq (hashes_hm hm2) (hashes_hm hm3) ->
+    num_uniq_hash (hm1 ++ hm2) = num_uniq_hash (hm1 ++ hm3).
+  Proof.
+  elim: hm1=> [/=/permP eq| hd tl IHtl]; rewrite /num_uniq_hash.
+  + by rewrite eq; apply eq_in_count=> /= h hin; rewrite /mult1 eq.
+  rewrite /num_uniq_hash (hashes_hm_cat (hd::tl) hm2) (hashes_hm_cat (hd::tl) hm3) !count_cat.
+  set s1:= hashes_hm (hd::tl).
+  set s2:= hashes_hm hm2.
+  set s3:= hashes_hm hm3.
+  move=> /permP peq.
+  congr addn; last first.
+  + by rewrite /mult1/=; rewrite peq; apply eq_in_count=> /= s sin; rewrite !count_cat peq.
+  apply eq_in_count=> /= n nin.
+  rewrite /mult1 /=.
+  set htl := hashes_hm tl.
+  rewrite !count_cat.
+  set m := hd.2 == n.
+  set o := (count_mem n htl).
+  by rewrite peq.
+  Qed.
+
+  Lemma num_uniq_hash_catC (hm1 hm2 : hash_map):
+    num_uniq_hash (hm1 ++ hm2) = num_uniq_hash (hm2 ++ hm1).
+  Proof.
+  rewrite /num_uniq_hash.
+  set s1 := hashes_hm (hm1 ++ hm2).
+  set s2 := hashes_hm (hm2 ++ hm1).
+  suffices /permP peq : perm_eq s1 s2.
+    rewrite peq; apply eq_in_count.
+    by move=> /= h hin; rewrite /mult1 peq.
+  rewrite /s1 /s2 !hashes_hm_cat.
+  by apply /permPl; apply perm_catC.
+  Qed.
+
+  Definition distinguished (hm : hash_map) : nat :=
+    count is_trivial (gen_partition hm).
+
+  Lemma size_gen_partition (hm : hash_map) : size (gen_partition hm) <= size hm.
+  Proof.
+  have : size hm < S (size hm) by apply ltnSn.
+  move: hm (size hm).+1.
+  move=> hm n; move: n hm=> n.
+  elim: n => [//| n' IHn [//|hd tl]] measure.
+  autorewrite with gen_partition.
+  rewrite /= eq_hash_refl .
+  suffices : (size (gen_partition (partitionate hd.2 (hd :: tl)).2)) <= size (filter (negb \o eq_hash hd.2) (hd::tl)).
+    rewrite /= eq_hash_refl /==> le_part.
+    suffices H: (size (gen_partition [seq x <- tl | (negb \o eq_hash hd.2) x])) <= (size tl).
+      by apply H.
+    by apply (leq_trans le_part (size_filter_le _ _)).
+  rewrite /= eq_hash_refl /=; apply IHn.
+  have {}measure : size tl < n'. by apply measure.
+  by apply: (leq_ltn_trans (size_filter_le _ _) measure).
+  Qed.
+
+  Lemma proj1_set_nth_prod (hm : hash_map) (b0 : B) (n0 i: nat):
+    i < size hm ->
+    hashes_hm (set_nth (b0, n0) hm i (b0, n0)) = set_nth n0 (hashes_hm hm) i n0.
+  Proof.
+  rewrite !set_nthE size_map -nat_coq_nat=> ->.
+  by rewrite hashes_hm_cat {1 2}/hashes_hm map_take /= map_drop.
+  Qed.
+
+  Lemma partitionate_sndE (hd : B * nat) (tl : seq (B * nat)):
+    (partitionate hd.2 (hd :: tl)).2 = [seq x <- hd :: tl | (negb \o eq_hash hd.2) x].
+  Proof. by []. Qed.
+
+  Lemma count_mult (hm : hash_map) (n : nat):
+    count (eq_hash n) hm = count_mem n (hashes_hm hm).
+  Proof.
+  elim: hm=> [//|hd tl IHtl] /=.
+  rewrite /eq_hash/pred_eq eq_sym.
+  by congr addn; apply IHtl.
+  Qed.
+
+  Lemma mult1_filter (n m : nat) (s: seq nat):
+    n != m -> mult1 s m = mult1 (filter (predC1 n) s) m.
+  Proof. by rewrite /mult1=> /(@count_mem_filter _ _ s) ->. Qed.
+
+  Lemma count_mult1_opt (hd : B * nat) (tl : seq (B * nat)):
+    let ps := (partitionate hd.2 (hd :: tl)).2 : seq (B * nat) in
+    count (mult1 (hashes_hm ps)) (hashes_hm ps) = count (mult1 (hashes_hm (hd :: tl))) (hashes_hm tl).
+  Proof.
+  rewrite partitionate_sndE.
+  move=> ps; set fhs := hashes_hm _.
+  have /permEl := perm_filterC (negb \o eq_hash hd.2) tl.
+  move=> /(perm_map snd)/permP <-.
+  rewrite map_cat count_cat.
+  set s_neq_hd := map _ _; set s_eq_hd := map _ _.
+  have -> : fhs = s_neq_hd by rewrite /fhs/hashes_hm/ps/= eq_hash_refl/=.
+  move=> {ps fhs}.
+  suffices ->: count (mult1 (hashes_hm (hd :: tl))) s_eq_hd = 0.
+    rewrite addn0; apply eq_in_count=>/= h /mapP[/= [b n]].
+    rewrite mem_filter=> /andP[neq_hd in_tl] ->.
+    move: neq_hd; rewrite /= /eq_hash/pred_eq/=.
+    move=> /(mult1_filter _ _ (hd.2:: hashes_hm tl)) ->.
+    suffices -> :s_neq_hd = [seq x <- hd.2 :: hashes_hm tl | predC1 hd.2 x] by [].
+    rewrite {}/s_neq_hd=> {s_eq_hd in_tl}.
+    elim: tl=> [/=|a tl' IHtl2]; first by case: ifP; move=> /negPf; rewrite eqxx.
+    rewrite /= {4}/negb eqxx {4}/negb /eq_hash/pred_eq.
+    case_eq (a.2 == hd.2); rewrite eq_sym /==> -> /=.
+    by rewrite IHtl2; rewrite /predC1/= eqxx /=.
+    by congr cons; rewrite IHtl2 /= eqxx /=.
+  apply /eqP; rewrite -allPn_count.
+  apply /allP=> /= shd /mapP[/= bn].
+  rewrite mem_filter=> /andP[eq_hd mem_tl] ->.
+  rewrite /mult1=> {s_neq_hd s_eq_hd shd}.
+  move: eq_hd.
+  rewrite /predC/= negbK/eq_hash/pred_eq=> ->.
+  rewrite add1n /negb /=.
+  move/perm_to_rem : mem_tl=> /(perm_map snd)/permP->.
+  by rewrite /= eqxx add1n; case: (count_mem _ _).
+  Qed.
+
+  Lemma num_triv_distinguished (hm : hash_map):
+    distinguished hm = num_uniq_hash hm.
+  Proof.
+  rewrite /distinguished /num_uniq_hash.
+  have : size hm < S (size hm) by apply ltnSn.
+  move: hm (size hm).+1.
+  move=> hm n; move: n hm=> n.
+  elim: n => [//| n' IHn [//|hd tl]].
+  autorewrite with gen_partition.
+  move=> size_ltn.
+  set p1 := (partitionate _ _).1.
+  set ps := (partitionate _ _).2.
+  set P := gen_partition _.
+  set Pc := mult1 _.
+  rewrite /=.
+  congr addn; rewrite /Pc.
+  + rewrite /is_trivial /p1 /= eq_hash_refl /=.
+    by rewrite size_filter count_mult /mult1 /= eqxx add1n.
+  suffices ps_size : size ps < n'.
+     by rewrite IHn // count_mult1_opt.
+  rewrite /ps partitionate_sndE.
+  rewrite /= eq_hash_refl/=.
+  apply: (leq_ltn_trans (size_filter_le _ _)).
+  apply size_ltn.
+  Qed.
+
+
+
 End Partition.
 
 Section Template.
@@ -420,9 +573,6 @@ Hypothesis iso_color_fine_can :
       effective_iso_ts g h ->
          relabeling_seq_triple (color g (init_hash g)) g
       =i relabeling_seq_triple (color h (init_hash h)) h.
-
-  Lemma nat_coq_nat (n m : nat) :  (n < m)%nat = (n < m). Proof. by []. Qed.
-  Lemma nat_coq_le_nat (n m : nat) :  (n <= m)%N = (n <= m). Proof. by []. Qed.
 
   Equations? foldl_In {T R : eqType} (s : seq T) (f : R -> forall (y : T), y \in s -> R) (z : R) : R :=
     foldl_In nil f z := z;
@@ -1109,6 +1259,183 @@ Hypothesis iso_color_fine_can :
     (*     perm_eq g h -> distinguish g hm = distinguish h hm. by admit. (* has to be an hypothesis *) *)
     (* have peq_graph_color_refine: forall (hm: hash_map) g h, perm_eq g h -> perm_eq (color_refine g hm) (color_refine h hm). by admit. (* has to be an hypothesis *) *)
     (* End of hypothesis for following lemma*)
+
+    Section wip.
+
+      Definition post_rel (f : seq (triple I B L) -> hash_map -> hash_map) :=
+        forall (G : seq (triple I B L)) (hm : hash_map) (mu : B -> B),
+          {in (get_bts G)&, injective mu} ->
+          {in (bnodes_hm hm)&, injective mu} ->
+          perm_eq (f (relabeling_seq_triple mu G) (map1 mu hm)) (map1 mu (f G hm)).
+
+      Definition perm_graph (f : seq (triple I B L) -> hash_map -> hash_map) :=
+        forall (G H: seq (triple I B L)), perm_eq G H -> forall (hm : hash_map), perm_eq (f G hm) (f H hm).
+
+      Definition perm_hm (f : seq (triple I B L) -> hash_map -> hash_map) :=
+        forall (hm p : hash_map), perm_eq hm p -> forall (G : seq (triple I B L)), perm_eq (f G hm) (f G p).
+
+
+      Lemma perm_graph_in_hm (f g : seq (triple I B L) -> hash_map -> hash_map):
+        perm_hm f ->
+        perm_graph g ->
+        forall (G H : seq (triple I B L)),
+          perm_eq G H ->
+          forall (I : seq (triple I B L)) (hm : hash_map),
+                 perm_eq (f I (g G hm)) (f I (g H hm)).
+     Proof.
+     move=> f_perm_hm g_perm_graph G H peq i hm.
+     by apply f_perm_hm; apply g_perm_graph.
+     Qed.
+
+     Lemma post_rel_in_hm (f g : seq (triple I B L) -> hash_map -> hash_map):
+        perm_hm f ->
+        post_rel g ->
+        forall (G H : seq (triple I B L)) (hm : hash_map) (mu : B -> B),
+            {in (get_bts G)&, injective mu} ->
+              {in (bnodes_hm hm)&, injective mu} ->
+            perm_eq (f H (g (relabeling_seq_triple mu G) (map1 mu hm))) (f H (map1 mu (g G hm))).
+     Proof.
+     move=> f_perm_hm g_post_rel G H hm mu mu_injG mu_injhm.
+     by apply f_perm_hm; apply g_post_rel.
+     Qed.
+
+     Lemma perm_post_rel_in_hm (f : seq (triple I B L) -> hash_map -> hash_map):
+       perm_graph f ->
+       post_rel f ->
+       forall (G H : seq (triple I B L)) (mu: B -> B),
+         perm_eq (relabeling_seq_triple mu G) H ->
+         {in (get_bts G)&, injective mu} ->
+         forall (hm : hash_map), {in (bnodes_hm hm)&, injective mu} ->
+           perm_eq (f H (map1 mu hm)) (map1 mu (f G hm)).
+     Proof.
+     move=> f_perm_graph f_post_rel G H mu peq mu_injG hm mu_injHm.
+     have step : perm_eq (f H (map1 mu hm)) (f (relabeling_seq_triple mu G) (map1 mu hm)).
+       by apply f_perm_graph; rewrite perm_sym.
+     apply: (perm_trans step).
+     by apply f_post_rel.
+     Qed.
+
+     Lemma perm_graph_post_rel_in_hm (f g : seq (triple I B L) -> hash_map -> hash_map):
+       perm_hm f ->
+       perm_graph g ->
+       post_rel g ->
+       forall (G H : seq (triple I B L)) (mu: B -> B),
+         perm_eq (relabeling_seq_triple mu G) H ->
+           {in (get_bts G)&, injective mu} ->
+             forall (hm : hash_map), {in (bnodes_hm hm)&, injective mu} ->
+               perm_eq (f H (g H (map1 mu hm))) (f H (map1 mu (g G hm))).
+     Proof.
+     move=> f_perm_hm g_perm_graph g_post_rel G H mu peq mu_injG hm mu_injHm.
+     by apply f_perm_hm; apply perm_post_rel_in_hm.
+     Qed.
+
+     Definition pres_bnodes (f : seq (triple I B L) -> hash_map -> hash_map) :=
+       forall (G : seq (triple I B L))(hm : hash_map),
+         bnodes_hm hm =i get_bts G -> bnodes_hm (f G hm) =i get_bts G.
+
+     Lemma post_rel_graph_hm (f g : seq (triple I B L) -> hash_map -> hash_map):
+       perm_hm f ->
+       perm_graph f ->
+       post_rel f ->
+       perm_graph g ->
+       post_rel g ->
+       pres_bnodes g ->
+       forall (G H : seq (triple I B L)) (mu: B -> B),
+         perm_eq (relabeling_seq_triple mu G) H ->
+           {in (get_bts G)&, injective mu} ->
+             forall (hm : hash_map),
+              bnodes_hm hm =i get_bts G ->
+              perm_eq (f H (g H (map1 mu hm))) (map1 mu (f G (g G hm))).
+     Proof.
+     move=> f_perm_hm f_perm_graph f_post_rel g_perm_graph g_post_rel g_pres_bnodes G H mu peq mu_injG hm mem_eq.
+     have /perm_trans -> // : perm_eq (f H (g H (map1 mu hm))) (f H (map1 mu (g G hm))).
+       apply f_perm_hm; apply perm_post_rel_in_hm=> // b bin; rewrite !mem_eq; apply mu_injG.
+     apply perm_post_rel_in_hm => //.
+     move: g_pres_bnodes=> /(_ _ _ mem_eq) f_mem_eq.
+     by move => b bin; rewrite !f_mem_eq; apply mu_injG.
+     Qed.
+
+
+     (* Proof. *)
+     (* move=> f_perm_hm g_perm_graph g_post_rel G H mu peq mu_injG hm mu_injHm. *)
+     (* by apply f_perm_hm; apply perm_post_rel_in_hm. *)
+     (* Qed. *)
+
+
+    End wip.
+
+    Definition init_hash' (g : seq (triple I B L)): hash_map -> hash_map :=
+      fun hm => init_hash g.
+
+    Lemma init_hash_shape (g : seq (triple I B L)) (hm : hash_map) :
+      init_hash g = init_hash' g hm.
+    Proof. by []. Qed.
+
+    Lemma init_hash_post_rel : post_rel init_hash'.
+    Proof.
+    move=> G hm mu mu_injG mu_injhm.
+    by rewrite -init_hash_shape perm_sym; apply init_hash_inj_rel.
+    Qed.
+
+    Lemma init_hash_is_perm_graph: perm_graph init_hash'.
+    Proof.
+    by move=> G H peq hm; rewrite -init_hash_shape; apply init_hash_perm_graph.
+    Qed.
+
+    Lemma init_hash_is_perm_hm: perm_hm init_hash'.
+    by move=> hm p _ g; rewrite -init_hash_shape.
+    Qed.
+
+    Lemma color_post_rel : post_rel color.
+    Proof.
+    move=> G hm mu mu_injG mu_injhm.
+    by apply color_post_relabeling.
+    Qed.
+
+    Lemma color_is_perm_graph: perm_graph color.
+    Proof.
+    by move=> G H peq hm; apply color_perm_graph.
+    Qed.
+
+    Lemma color_is_perm_hm: perm_hm color.
+    by move=> hm p peq g; rewrite perm_sym; apply color_perm_hm.
+    Qed.
+
+    Lemma color_pres_bnodes : pres_bnodes color.
+    Proof. by move=> G hm; apply color_good_hm. Qed.
+
+    Hint Resolve init_hash_post_rel.
+    Hint Resolve init_hash_is_perm_graph.
+    Hint Resolve init_hash_is_perm_hm.
+    Hint Resolve color_post_rel.
+    Hint Resolve color_is_perm_graph.
+    Hint Resolve color_is_perm_hm.
+    Hint Resolve color_pres_bnodes.
+
+    (* Lemma color_refine_post_rel : post_rel color_refine. *)
+    (* Proof. *)
+    (* move=> G hm mu mu_injG mu_injhm. *)
+    (* by apply color_refine_post_relabeling. *)
+    (* Qed. *)
+
+    (* Lemma color_refine_is_perm_graph: perm_graph color_refine. *)
+    (* Proof. *)
+    (* by move=> G H peq hm; apply color_refine_perm_graph. *)
+    (* Qed. *)
+
+    (* Lemma color_refine_is_perm_hm: perm_hm color_refine. *)
+    (* by move=> hm p peq g; rewrite perm_sym; apply color_refine_perm_hm. *)
+    (* Qed. *)
+
+
+    Lemma perm_hash_eq_fine (hm p : hash_map):
+      perm_eq (hashes_hm hm) (hashes_hm p) -> is_fine (gen_partition hm) = is_fine (gen_partition p).
+    Proof.
+    move=> /permP count_hashes.
+    rewrite /is_fine.
+   admit.
+   Admitted.
+
 Lemma eiso_mem_eq_canonicalize (g h : seq (triple I B L)) (ug: uniq g) (uh: uniq h) :
             effective_iso_ts g h ->
               is_fine (gen_partition (color g (init_hash g))) = false ->
@@ -1126,24 +1453,13 @@ move=> /= c.
 move: iso_mu=> /and3P[piso urel peq].
 have mu_inj := is_pre_iso_ts_inj piso.
 have peq_col : perm_eq col_h (map1 mu col_g).
-  suffices step : (perm_eq col_h (color h (init_hash (relabeling_seq_triple mu g)))).
-    apply: (perm_trans step).
-    suffices step2 : (perm_eq (color h (init_hash (relabeling_seq_triple mu g))) (color h (map1 mu (init_hash g)))).
-      apply: (perm_trans step2).
-      suffices step3 : (perm_eq (color h (map1 mu (init_hash g))) (color (relabeling_seq_triple mu g) (map1 mu (init_hash g)))).
-        apply: (perm_trans step3).
-        suffices step4 : (perm_eq (color (relabeling_seq_triple mu g) (map1 mu (init_hash g))) (map1 mu (color g (init_hash g)))).
-          by apply: (perm_trans step4 (perm_refl _)).
-        apply: color_post_relabeling=> //.
-        by move=> b bin; rewrite !good_init; apply mu_inj.
-      by apply color_perm_graph; rewrite perm_sym peq.
-    by apply: (color_perm_hm _ _ (init_hash_inj_rel g mu_inj)).
-  by apply color_perm_hm; apply init_hash_perm_graph.
+  rewrite /col_h/col_g (init_hash_shape _ (map1 mu [::])) (init_hash_shape _ [::]).
+  have /perm_trans -> // : (perm_eq (color h (init_hash' h (map1 mu [::]))) (color h (map1 mu (init_hash' g [::])))).
+    by apply perm_graph_post_rel_in_hm.
+  by apply perm_post_rel_in_hm=> // b bin; rewrite !good_init; apply mu_inj.
 have -> : [seq can_h i | i <- choose_part col_h] =i [seq can_h i | i <- choose_part (map1 mu col_g)].
   apply eq_mem_map; apply perm_mem.
   by apply choose_part_order; apply perm_map.
-  (* have ucolg1 : uniq (bnodes_hm (map1 mu col_g)). admit. (* needs to strengthen the hypothesis connecting the bnodes of a graph with the the bnodes in color \o init hash *) *)
-  (* have ucolh1 : uniq (bnodes_hm col_h). admit. (* same as above *) *)
 rewrite choose_part_post_relabeling map1_map -map_comp.
 suffices -> :
   [seq can_g i | i <- choose_part col_g] = [seq ((can_h) \o (fun p => (mu p.1, p.2))) i | i <-  choose_part col_g] by [].
@@ -1310,15 +1626,6 @@ Section kmap_template.
     let bs := get_bts ts in
     zip bs (nseq (size bs) 0).
 
-  Lemma zip_proj1 (T S : Type) (s1 : seq T) (s2 : seq S) :
-    size s1 = size s2 ->
-    map fst (zip s1 s2) = s1.
-  Proof.
-  elim: s1 s2=> [| hd tl IHtl] s2; first by case: s2.
-  case: s2=> [//|hd2 tl2] /=[]eq_size.
-  by congr cons; apply IHtl.
-  Qed.
-
   Lemma good_init_kmap (g : seq (triple I B L)) : bnodes_hm (init_hash_kmap g) =i get_bts g.
   Proof. by move=> x; rewrite /init_hash_kmap/bnodes_hm zip_proj1 // size_nseq. Qed.
 
@@ -1351,41 +1658,8 @@ Section kmap_template.
     bnodes_hm hm =i get_bts g -> bnodes_hm (color_refine_kmap g hm) =i get_bts g.
   Proof. by []. Qed.
 
-  (* Fixpoint mark_hash_kmap (b : B) (n : nat) (hm : hash_map B) := *)
-  (*   match hm with *)
-  (*   | nil => nil *)
-  (*   | bn :: bns => *)
-  (*       if eq_bnode B b bn *)
-  (*       then (b,n)::bns *)
-  (*       else bn:: mark_hash_kmap b n bns *)
-  (*   end. *)
-
   Definition mark_hash_kmap_2 (b : B) (n : nat) (hm : hash_map B) :=
     set_nth (b,n) hm (find (eq_bnode B b) hm) (b,n).
-
-  (* Lemma mark_hash_kmap_spec (b : B) (n : nat) (hm : hash_map B) : *)
-  (*   has (eq_bnode B b) hm -> *)
-  (*   mark_hash_kmap b n hm = (let i := find (eq_bnode B b) hm in *)
-  (*                           take i hm ++ ((b,n) :: drop (i + 1) hm)). *)
-  (* Proof. *)
-  (* move=> /split_find/=[]bn s1 s2 eqb_bbn neq_has. *)
-  (* suffices -> : mark_hash_kmap b n (rcons s1 bn ++ s2) = s1 ++ mark_hash_kmap b n (bn :: s2). *)
-  (*   rewrite /= eqb_bbn. *)
-  (*   suffices -> : drop (find (eq_bnode B b) (rcons s1 bn ++ s2) + 1) (rcons s1 bn ++ s2) = s2. *)
-  (*     by []. *)
-  (*   move/negbTE : neq_has=> neq_has. *)
-  (*   rewrite drop_size_cat // -{2}cats1 -catA find_cat neq_has. *)
-  (*   by rewrite size_rcons /= eqb_bbn addn0 addn1. *)
-  (* rewrite -cats1 -catA cat1s. *)
-  (* set s2' := bn :: s2. *)
-  (* set s := mark_hash_kmap b n s2'. *)
-  (* elim: s1 neq_has=> [//|hd tl IHtl] /=. *)
-  (* rewrite negb_or=> /= /andP[/negbTE -> hasPn_tl]. *)
-  (* by rewrite (IHtl hasPn_tl). *)
-  (* Qed. *)
-
-  Definition distinguished (hm : hash_map B) : nat :=
-    count (@is_trivial B) (gen_partition hm).
 
   Definition fresh (hm : hash_map B) : nat :=
     (foldl maxn 0 (hashes_hm hm)).+1.
@@ -1449,24 +1723,6 @@ Section kmap_template.
   by rewrite IHtl.
   Qed.
 
-  Lemma size_gen_partition (hm : hash_map B) : size (gen_partition hm) <= size hm.
-  Proof.
-  have : size hm < S (size hm) by apply ltnSn.
-  move: hm (size hm).+1.
-  move=> hm n; move: n hm=> n.
-  elim: n => [//| n' IHn [//|hd tl]] measure.
-  autorewrite with gen_partition.
-  rewrite /= eq_hash_refl .
-  suffices : (size (gen_partition (partitionate hd.2 (hd :: tl)).2)) <= size (filter (negb \o eq_hash B hd.2) (hd::tl)).
-    rewrite /= eq_hash_refl /==> le_part.
-    suffices H: (size (gen_partition [seq x <- tl | (negb \o eq_hash B hd.2) x])) <= (size tl).
-      by apply H.
-    by apply (leq_trans le_part (size_filter_le _ _)).
-  rewrite /= eq_hash_refl /=; apply IHn.
-  have {}measure : size tl < n'. by apply measure.
-  by apply: (leq_ltn_trans (size_filter_le _ _) measure).
-  Qed.
-
   Lemma choose_part_not_nil_kmap (hm : hash_map B): ~~ is_fine (gen_partition hm) -> (choose_part_kmap hm == [::]) = false.
   Proof.
   move=> finePn; apply: negPf; move: finePn; apply contraNN.
@@ -1480,51 +1736,6 @@ Section kmap_template.
   move=> all_triv.
   have : ~~ (has (predC (is_trivial (B:=B))) (gen_partition hm)) by rewrite all_triv.
   by rewrite has_predC; rewrite negbK.
-  Qed.
-
-  Definition mult1 {T : eqType} (s : seq T) (t : T) :=
-    count_mem t s == 1.
-
-  Definition num_uniq_hash (hm : hash_map B) :=
-    count (mult1 (hashes_hm hm)) (hashes_hm hm).
-
-  Lemma hashes_hm_cat (hm1 hm2 : hash_map B):
-    hashes_hm (hm1 ++ hm2) = hashes_hm hm1 ++ hashes_hm hm2.
-  Proof. exact: map_cat. Qed.
-
-  Lemma num_uniq_hash_cat (hm1 hm2 hm3 : hash_map B) :
-    perm_eq (hashes_hm hm2) (hashes_hm hm3) ->
-    num_uniq_hash (hm1 ++ hm2) = num_uniq_hash (hm1 ++ hm3).
-  Proof.
-  elim: hm1=> [/=/permP eq| hd tl IHtl]; rewrite /num_uniq_hash.
-  + by rewrite eq; apply eq_in_count=> /= h hin; rewrite /mult1 eq.
-  rewrite /num_uniq_hash (hashes_hm_cat (hd::tl) hm2) (hashes_hm_cat (hd::tl) hm3) !count_cat.
-  set s1:= hashes_hm (hd::tl).
-  set s2:= hashes_hm hm2.
-  set s3:= hashes_hm hm3.
-  move=> /permP peq.
-  congr addn; last first.
-  + by rewrite /mult1/=; rewrite peq; apply eq_in_count=> /= s sin; rewrite !count_cat peq.
-  apply eq_in_count=> /= n nin.
-  rewrite /mult1 /=.
-  set htl := hashes_hm tl.
-  rewrite !count_cat.
-  set m := hd.2 == n.
-  set o := (count_mem n htl).
-  by rewrite peq.
-  Qed.
-
-  Lemma num_uniq_hash_catC (hm1 hm2 : hash_map B):
-    num_uniq_hash (hm1 ++ hm2) = num_uniq_hash (hm2 ++ hm1).
-  Proof.
-  rewrite /num_uniq_hash.
-  set s1 := hashes_hm (hm1 ++ hm2).
-  set s2 := hashes_hm (hm2 ++ hm1).
-  suffices /permP peq : perm_eq s1 s2.
-    rewrite peq; apply eq_in_count.
-    by move=> /= h hin; rewrite /mult1 peq.
-  rewrite /s1 /s2 !hashes_hm_cat.
-  by apply /permPl; apply perm_catC.
   Qed.
 
   Lemma not_fine_chosen_part_in_P (hm : hash_map B):
@@ -1573,83 +1784,6 @@ Section kmap_template.
       by move=> /eqP <-; rewrite ltnn.
   Qed.
 
-  Lemma count_mem_inP (T : eqType) (t : T) (s :seq T):
-    reflect (count_mem t s >= 1) (t \in s).
-  Proof.
-  apply (iffP idP).
-  + rewrite -mem_undup=> t_in.
-    suffices uniq_count: 1 <= count_mem t (undup s).
-      by apply (leq_trans uniq_count (count_undup _ _)).
-    move: t_in (@count_uniq_mem _ (undup s) t (undup_uniq s)).
-    by move=> -> ->.
-  + elim: s=> [//|hd tl IHtl].
-    rewrite /= in_cons eq_sym.
-    case: (_ == _)=> [//|/=].
-    by rewrite add0n; apply IHtl.
-  Qed.
-
-  Corollary count_mem_1_in (T : eqType) (t : T) (s : seq T):
-    count_mem t s = 1 -> t \in s.
-  Proof. by move=> eq; apply /count_mem_inP; rewrite eq. Qed.
-
-  Lemma neq_SSnm (n m: nat):
-    n.+1 != m.+1 -> n != m.
-  Proof.
-  rewrite /negb.
-  case_eq (n == m)=> [|//].
-  by move=> /eqP ->; rewrite eqxx.
-  Qed.
-
-  Lemma neq_count_mem {T : eqType} {t1 t2 : T} (s : seq T):
-    count_mem t1 s != count_mem t2 s -> t1 != t2.
-  Proof.
-  elim:s=> [//| hd tl IHtl] /=.
-  case_eq (hd == t1); case_eq (hd == t2).
-  + move=> _ _ /=.
-    by rewrite !add1n=> /neq_SSnm/IHtl->.
-  + by move=> concl /eqP <-; rewrite concl.
-  + by move /eqP ->; rewrite eq_sym=> ->.
-  + by move=> _ _ /=; rewrite add0n=> /IHtl.
-  Qed.
-
-  Lemma count_mult (hm : hash_map B) (n : nat):
-    count (eq_hash B n) hm = count_mem n (hashes_hm hm).
-  Proof.
-  elim: hm=> [//|hd tl IHtl] /=.
-  rewrite /eq_hash/pred_eq eq_sym.
-  by congr addn; apply IHtl.
-  Qed.
-
-  Lemma count_filter (T : Type) (a : pred T) (s : seq T):
-    count a s = count a (filter a s).
-  Proof.
-  elim s=> [//|hd tl IHtl] /=.
-  by case_eq (a hd)=> /= [->|]; rewrite IHtl.
-  Qed.
-
-  Lemma le_count_rem (T : eqType) (x : T) (P : pred T) (s : seq T):
-    count P s <= count P (rem x s) + (x \in s) && P x.
-  Proof.
-  rewrite count_rem addnBC.
-  set x' := (_ && _); set n:= count P s.
-  by case: x'; case: n=> //.
-  Qed.
-
-  Lemma lt_count_subpred (T : eqType) (p1 p2 : pred T) (s : seq T):
-    subpred p1 p2 -> (exists (x:T), [&& p2 x, ~~ (p1 x) & x \in s]) ->
-    count p1 s < count p2 s.
-  Proof.
-  move=> spred [x /and3P[p2x /negPf p1xPn]].
-  elim s=> [//|hd tl IHtl].
-  rewrite in_cons=> /orP[/eqP <-|/IHtl count_tl] /=.
-  + rewrite p2x p1xPn /= add0n add1n.
-    by apply (leq_ltn_trans (sub_count spred _) (ltnSn _)).
-  case_eq (p1 hd)=> [/spred -> | _] /=.
-  + by rewrite !add1n -nat_coq_nat /= ltnS nat_coq_nat count_tl.
-  case: (p2 hd); rewrite !add0n ?add1n; last by rewrite count_tl.
-  by apply (ltn_trans count_tl (ltnSn _)).
-  Qed.
-
   Lemma mem_choose_part_kmap_mult1Pn (hm : hash_map B):
     ~~ is_fine (gen_partition hm) ->
      forall (bn : B * nat),
@@ -1678,103 +1812,6 @@ Section kmap_template.
       set p' := nth _ _ _.
       by move=> /(nth_find [::]); rewrite /=/is_trivial/negb; case: ifP=> //.
   by move=> T [//| hd' [//|tl']] //.
-  Qed.
-
-  Lemma proj1_set_nth_prod (hm : hash_map B) (b0 : B) (n0 i: nat):
-    i < size hm ->
-    hashes_hm (set_nth (b0, n0) hm i (b0, n0)) = set_nth n0 (hashes_hm hm) i n0.
-  Proof.
-  rewrite !set_nthE size_map -nat_coq_nat=> ->.
-  by rewrite hashes_hm_cat {1 2}/hashes_hm map_take /= map_drop.
-  Qed.
-
-  Lemma partitionate_sndE (hd : B * nat) (tl : seq (B * nat)):
-    (partitionate hd.2 (hd :: tl)).2 = [seq x <- hd :: tl | (negb \o eq_hash B hd.2) x].
-  Proof. by []. Qed.
-
-  Lemma count_mem_filter (n m : nat) (s: seq nat):
-    n != m -> count_mem m s = count_mem m (filter (predC1 n) s).
-  Proof.
-  elim: s=> [//|hd tl IHtl] /=.
-  case: ifP.
-  + rewrite /==> /negPf neq_hdn /negPf neq_hdm.
-    by congr addn; apply IHtl; apply /negPf.
-  rewrite {1}/negb.
-  case: ifP=> [/eqP -> _|//] neq_nm.
-  by rewrite (negPf neq_nm) (IHtl neq_nm).
-  Qed.
-
-  Lemma mult1_filter (n m : nat) (s: seq nat):
-    n != m -> mult1 s m = mult1 (filter (predC1 n) s) m.
-  Proof. by rewrite /mult1=> /(count_mem_filter _ _ s) ->. Qed.
-
-  Lemma allPn_count (T : Type) (a : pred T) (s : seq T): all (predC a) s = (count a s == 0).
-  Proof.
-  apply /idP/idP; elim: s=> [//| hd tl IHtl] /=.
-  + by move=> /andP[/negPf -> /IHtl ->].
-  case_eq (a hd); first by rewrite add1n //.
-  by move=> _ /= /IHtl ->.
-  Qed.
-
-  Lemma count_mult1_opt (hd : B * nat) (tl : seq (B * nat)):
-    let ps := (partitionate hd.2 (hd :: tl)).2 : seq (B * nat) in
-    count (mult1 (hashes_hm ps)) (hashes_hm ps) = count (mult1 (hashes_hm (hd :: tl))) (hashes_hm tl).
-  Proof.
-  rewrite partitionate_sndE.
-  move=> ps; set fhs := hashes_hm _.
-  have /permEl := perm_filterC (negb \o eq_hash B hd.2) tl.
-  move=> /(perm_map snd)/permP <-.
-  rewrite map_cat count_cat.
-  set s_neq_hd := map _ _; set s_eq_hd := map _ _.
-  have -> : fhs = s_neq_hd by rewrite /fhs/hashes_hm/ps/= eq_hash_refl/=.
-  move=> {ps fhs}.
-  suffices ->: count (mult1 (hashes_hm (hd :: tl))) s_eq_hd = 0.
-    rewrite addn0; apply eq_in_count=>/= h /mapP[/= [b n]].
-    rewrite mem_filter=> /andP[neq_hd in_tl] ->.
-    move: neq_hd; rewrite /= /eq_hash/pred_eq/=.
-    move=> /(mult1_filter _ _ (hd.2:: hashes_hm tl)) ->.
-    suffices -> :s_neq_hd = [seq x <- hd.2 :: hashes_hm tl | predC1 hd.2 x] by [].
-    rewrite {}/s_neq_hd=> {s_eq_hd in_tl}.
-    elim: tl=> [/=|a tl' IHtl2]; first by case: ifP; move=> /negPf; rewrite eqxx.
-    rewrite /= {4}/negb eqxx {4}/negb /eq_hash/pred_eq.
-    case_eq (a.2 == hd.2); rewrite eq_sym /==> -> /=.
-    by rewrite IHtl2; rewrite /predC1/= eqxx /=.
-    by congr cons; rewrite IHtl2 /= eqxx /=.
-  apply /eqP; rewrite -allPn_count.
-  apply /allP=> /= shd /mapP[/= bn].
-  rewrite mem_filter=> /andP[eq_hd mem_tl] ->.
-  rewrite /mult1=> {s_neq_hd s_eq_hd shd}.
-  move: eq_hd.
-  rewrite /predC/= negbK/eq_hash/pred_eq=> ->.
-  rewrite add1n /negb /=.
-  move/perm_to_rem : mem_tl=> /(perm_map snd)/permP->.
-  by rewrite /= eqxx add1n; case: (count_mem _ _).
-  Qed.
-
-  Lemma num_triv_distinguished (hm : hash_map B):
-    distinguished hm = num_uniq_hash hm.
-  Proof.
-  rewrite /distinguished /num_uniq_hash.
-  have : size hm < S (size hm) by apply ltnSn.
-  move: hm (size hm).+1.
-  move=> hm n; move: n hm=> n.
-  elim: n => [//| n' IHn [//|hd tl]].
-  autorewrite with gen_partition.
-  move=> size_ltn.
-  set p1 := (partitionate _ _).1.
-  set ps := (partitionate _ _).2.
-  set P := gen_partition _.
-  set Pc := mult1 _.
-  rewrite /=.
-  congr addn; rewrite /Pc.
-  + rewrite /is_trivial /p1 /= eq_hash_refl /=.
-    by rewrite size_filter count_mult /mult1 /= eqxx add1n.
-  suffices ps_size : size ps < n'.
-     by rewrite IHn // count_mult1_opt.
-  rewrite /ps partitionate_sndE.
-  rewrite /= eq_hash_refl/=.
-  apply: (leq_ltn_trans (size_filter_le _ _)).
-  apply size_ltn.
   Qed.
 
   Lemma distinguished_mark (bn: B * nat) (hm : hash_map B):

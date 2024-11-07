@@ -563,3 +563,106 @@ Lemma zip_uniq_proj (T1 T2 : eqType) (s1 : seq T1) (s2 : seq T2) :
   elim: s2 s1=> [//|hd tl IHtl] [//|// a tla] eq_size /=.
   by congr cons; rewrite IHtl //; move: eq_size=> /=[->].
   Qed.
+
+  Lemma zip_proj1 (T S : Type) (s1 : seq T) (s2 : seq S) :
+    size s1 = size s2 ->
+    map fst (zip s1 s2) = s1.
+  Proof.
+  elim: s1 s2=> [| hd tl IHtl] s2; first by case: s2.
+  case: s2=> [//|hd2 tl2] /=[]eq_size.
+  by congr cons; apply IHtl.
+  Qed.
+
+  Lemma count_mem_inP (T : eqType) (t : T) (s :seq T):
+    reflect (count_mem t s >= 1) (t \in s).
+  Proof.
+  apply (iffP idP).
+  + rewrite -mem_undup=> t_in.
+    suffices uniq_count: 1 <= count_mem t (undup s).
+      by apply (leq_trans uniq_count (count_undup _ _)).
+    move: t_in (@count_uniq_mem _ (undup s) t (undup_uniq s)).
+    by move=> -> ->.
+  + elim: s=> [//|hd tl IHtl].
+    rewrite /= in_cons eq_sym.
+    case: (_ == _)=> [//|/=].
+    by rewrite add0n; apply IHtl.
+  Qed.
+
+  Corollary count_mem_1_in (T : eqType) (t : T) (s : seq T):
+    count_mem t s = 1 -> t \in s.
+  Proof. by move=> eq; apply /count_mem_inP; rewrite eq. Qed.
+
+  Lemma neq_SSnm (n m: nat):
+    n.+1 != m.+1 -> n != m.
+  Proof.
+  rewrite /negb.
+  case_eq (n == m)=> [|//].
+  by move=> /eqP ->; rewrite eqxx.
+  Qed.
+
+  Lemma neq_count_mem {T : eqType} {t1 t2 : T} (s : seq T):
+    count_mem t1 s != count_mem t2 s -> t1 != t2.
+  Proof.
+  elim:s=> [//| hd tl IHtl] /=.
+  case_eq (hd == t1); case_eq (hd == t2).
+  + move=> _ _ /=.
+    by rewrite !add1n=> /neq_SSnm/IHtl->.
+  + by move=> concl /eqP <-; rewrite concl.
+  + by move /eqP ->; rewrite eq_sym=> ->.
+  + by move=> _ _ /=; rewrite add0n=> /IHtl.
+  Qed.
+
+
+  Lemma count_filter (T : Type) (a : pred T) (s : seq T):
+    count a s = count a (filter a s).
+  Proof.
+  elim s=> [//|hd tl IHtl] /=.
+  by case_eq (a hd)=> /= [->|]; rewrite IHtl.
+  Qed.
+
+  Lemma le_count_rem (T : eqType) (x : T) (P : pred T) (s : seq T):
+    count P s <= count P (rem x s) + (x \in s) && P x.
+  Proof.
+  rewrite count_rem addnBC.
+  set x' := (_ && _); set n:= count P s.
+  by case: x'; case: n=> //.
+  Qed.
+
+  Lemma nat_coq_nat (n m : nat) :  (n < m)%nat = (n < m). Proof. by []. Qed.
+  Lemma nat_coq_le_nat (n m : nat) :  (n <= m)%N = (n <= m). Proof. by []. Qed.
+
+  Lemma lt_count_subpred (T : eqType) (p1 p2 : pred T) (s : seq T):
+    subpred p1 p2 -> (exists (x:T), [&& p2 x, ~~ (p1 x) & x \in s]) ->
+    count p1 s < count p2 s.
+  Proof.
+  move=> spred [x /and3P[p2x /negPf p1xPn]].
+  elim s=> [//|hd tl IHtl].
+  rewrite in_cons=> /orP[/eqP <-|/IHtl count_tl] /=.
+  + rewrite p2x p1xPn /= add0n add1n.
+    by apply (leq_ltn_trans (sub_count spred _) (ltnSn _)).
+  case_eq (p1 hd)=> [/spred -> | _] /=.
+  + by rewrite !add1n -nat_coq_nat /= ltnS nat_coq_nat count_tl.
+  case: (p2 hd); rewrite !add0n ?add1n; last by rewrite count_tl.
+  by apply (ltn_trans count_tl (ltnSn _)).
+  Qed.
+
+  Lemma count_mem_filter (n m : nat) (s: seq nat):
+    n != m -> count_mem m s = count_mem m (filter (predC1 n) s).
+  Proof.
+  elim: s=> [//|hd tl IHtl] /=.
+  case: ifP.
+  + rewrite /==> /negPf neq_hdn /negPf neq_hdm.
+    by congr addn; apply IHtl; apply /negPf.
+  rewrite {1}/negb.
+  case: ifP=> [/eqP -> _|//] neq_nm.
+  by rewrite (negPf neq_nm) (IHtl neq_nm).
+  Qed.
+
+  Lemma allPn_count (T : Type) (a : pred T) (s : seq T): all (predC a) s = (count a s == 0).
+  Proof.
+  apply /idP/idP; elim: s=> [//| hd tl IHtl] /=.
+  + by move=> /andP[/negPf -> /IHtl ->].
+  case_eq (a hd); first by rewrite add1n //.
+  by move=> _ /= /IHtl ->.
+  Qed.
+
