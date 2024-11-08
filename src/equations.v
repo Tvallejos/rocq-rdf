@@ -1252,12 +1252,28 @@ Hypothesis iso_color_fine_can :
     Hypothesis choose_part_post_relabeling : forall (hm: hash_map)(mu : B -> B), choose_part (map1 mu hm) = map1 mu (choose_part hm).
     Hypothesis color_refine_perm_hm : forall (g : seq (triple I B L)) (hm p: hash_map), perm_eq hm p -> perm_eq (color_refine g hm) (color_refine g p).
 
+    Hypothesis color_refine_post_relabeling : forall (g : seq (triple I B L)) (hm : hash_map) (mu : B -> B),
+             {in (get_bts g)&, injective mu} ->
+             {in (bnodes_hm hm)&, injective mu} ->
+             perm_eq (color_refine (relabeling_seq_triple mu g) (map1 mu hm))
+                     (map1 mu (color_refine g hm)).
+    Hypothesis color_refine_perm_graph : forall (g h: seq (triple I B L)) (hm : hash_map), perm_eq g h -> perm_eq (color_refine g hm) (color_refine h hm).
+
+    Hypothesis mark_post_rel: forall (b : B) (hm : hash_map) (mu : B -> B),
+           {in (bnodes_hm hm)&, injective mu} ->
+           perm_eq (mark (mu b) (map1 mu hm)) (map1 mu (mark b hm)).
+
+    Hypothesis mark_perm_hm : forall (b : B) (hm p : hash_map), perm_eq hm p -> perm_eq (mark b hm) (mark b p).
+
     (*not yet used*)
-    (* have peq_mark : forall b (hm p: hash_map), perm_eq hm p -> perm_eq (mark b hm) (mark b p). by admit. (* has to be an hypothesis *) *)
-    (* have peq_hm_distinguish : forall (hm p : hash_map) g, perm_eq hm p -> distinguish g hm = distinguish g p. by admit. (* has to be an hypothesis *) *)
-    (* have peq_graph_distinguish : forall (hm : hash_map) (g h : seq (triple I B L)), *)
-    (*     perm_eq g h -> distinguish g hm = distinguish h hm. by admit. (* has to be an hypothesis *) *)
-    (* have peq_graph_color_refine: forall (hm: hash_map) g h, perm_eq g h -> perm_eq (color_refine g hm) (color_refine h hm). by admit. (* has to be an hypothesis *) *)
+    Lemma distinguish_perm_hm : forall (hm p : hash_map) g, perm_eq hm p -> distinguish g hm = distinguish g p.
+    Proof.
+    Admitted.
+
+    Lemma distinguish_perm_graph : forall (hm : hash_map) (g h : seq (triple I B L)),
+        perm_eq g h -> distinguish g hm = distinguish h hm.
+    Admitted.
+
     (* End of hypothesis for following lemma*)
 
     Section wip.
@@ -1355,13 +1371,6 @@ Hypothesis iso_color_fine_can :
      by move => b bin; rewrite !f_mem_eq; apply mu_injG.
      Qed.
 
-
-     (* Proof. *)
-     (* move=> f_perm_hm g_perm_graph g_post_rel G H mu peq mu_injG hm mu_injHm. *)
-     (* by apply f_perm_hm; apply perm_post_rel_in_hm. *)
-     (* Qed. *)
-
-
     End wip.
 
     Definition init_hash' (g : seq (triple I B L)): hash_map -> hash_map :=
@@ -1412,11 +1421,11 @@ Hypothesis iso_color_fine_can :
     Hint Resolve color_is_perm_hm.
     Hint Resolve color_pres_bnodes.
 
-    (* Lemma color_refine_post_rel : post_rel color_refine. *)
-    (* Proof. *)
-    (* move=> G hm mu mu_injG mu_injhm. *)
-    (* by apply color_refine_post_relabeling. *)
-    (* Qed. *)
+    Lemma color_refine_post_rel : post_rel color_refine.
+    Proof.
+    move=> G hm mu mu_injG mu_injhm.
+    by apply color_refine_post_relabeling.
+    Qed.
 
     (* Lemma color_refine_is_perm_graph: perm_graph color_refine. *)
     (* Proof. *)
@@ -1480,7 +1489,6 @@ Hypothesis iso_color_fine_can :
       perm_eq (hashes_hm hm) (hashes_hm p) -> is_fine (gen_partition hm) = is_fine (gen_partition p).
     Proof.
     move=> count_hashes.
-    (* move=> /permP count_hashes. *)
     rewrite /is_fine.
     rewrite !all_count.
     suffices -> : count (is_trivial (B:=B)) (gen_partition hm) = count (is_trivial (B:=B)) (gen_partition p).
@@ -1521,7 +1529,7 @@ have -> : [seq can_h i | i <- choose_part col_h] =i [seq can_h i | i <- choose_p
 rewrite choose_part_post_relabeling map1_map -map_comp.
 suffices -> :
   [seq can_g i | i <- choose_part col_g] = [seq ((can_h) \o (fun p => (mu p.1, p.2))) i | i <-  choose_part col_g] by [].
-suffices step b : b \in choose_part col_g -> can_g b = can_h (mu b.1, b.2) by apply/eq_in_map.
+suffices step (bn : B * nat) : bn \in choose_part col_g -> can_g bn = can_h (mu bn.1, bn.2) by apply/eq_in_map.
   rewrite /can_g /can_h /canonicalize => hb /=.
   set hmg := (X in is_fine (gen_partition X)).
   set test_g := is_fine _.
@@ -1532,71 +1540,30 @@ suffices step b : b \in choose_part col_g -> can_g b = can_h (mu b.1, b.2) by ap
      by rewrite /test_g => ->.
    rewrite /hmh -(hashes_of_map1 hmg mu).
    apply perm_map.
-   suffices step1 : perm_eq (color_refine h (mark (mu b.1) (map1 mu col_g))) hmh.
-     apply: (perm_trans _ step1).
-     suffices step2: perm_eq (color_refine h (map1 mu (mark b.1 col_g))) (color_refine h (mark (mu b.1) (map1 mu col_g))).
-       apply: (perm_trans _ step2).
-       suffices step3: perm_eq (color_refine (relabeling_seq_triple mu g) (map1 mu (mark b.1 col_g))) (color_refine h (map1 mu (mark b.1 col_g))).
-         apply: (perm_trans _ step3).
-         have H1 : forall (g : seq (triple I B L)) (hm : hash_map) (mu : B -> B),
-             (* maybe also needs bnodes_hm hm =i get_bts g *)
-             {in (get_bts g)&, injective mu} ->
-             {in (bnodes_hm hm)&, injective mu} ->
-             perm_eq (color_refine (relabeling_seq_triple mu g) (map1 mu hm))
-                     (map1 mu (color_refine g hm)).
-         admit. (* new hypothesis *)
-         have mu_inj_mhm: {in bnodes_hm (mark b.1 col_g) &, injective mu}.
-          move=> b1 b2.
-          rewrite (good_mark g).
-          rewrite (good_mark g).
-          apply mu_inj.
-          apply color_good_hm.
-          apply good_init.
-          by apply in_part_in_bnodes.
-          apply color_good_hm.
-          apply good_init.
-          by apply in_part_in_bnodes.
-         have := H1 g (mark b.1 col_g) mu mu_inj mu_inj_mhm.
-         rewrite {1}perm_sym=> step4.
-         by apply: (perm_trans _ step4).
-       have H2 : forall (g h: seq (triple I B L)) (hm : hash_map), perm_eq g h -> perm_eq (color_refine g hm) (color_refine h hm).
-       admit.
-       by apply H2.
-       apply color_refine_perm_hm.
-       have H3: forall (b : B) (hm : hash_map) (mu : B -> B),
-           {in (bnodes_hm hm)&, injective mu} ->
-           perm_eq (mark (mu b) (map1 mu hm)) (map1 mu (mark b hm)).
-       admit.
-       rewrite perm_sym.
-       apply H3.
-       move=> b1 b2.
-       rewrite (color_good_hm).
-       rewrite (color_good_hm).
-       by apply mu_inj.
-       by apply good_init.
-       by apply good_init.
+   have /(perm_trans _) -> // : perm_eq (color_refine h (mark (mu bn.1) (map1 mu col_g))) hmh.
      apply color_refine_perm_hm.
-     have H4 : forall (b : B) (hm p : hash_map), perm_eq hm p -> perm_eq (mark b hm) (mark b p).
-     admit.
-     apply H4.
-     by rewrite perm_sym peq_col.
-
-
-(* have  *)
-(* rewrite perm_hash_eq_fine. *)
-
-
-
+     by apply mark_perm_hm; rewrite perm_sym.
+   have /(perm_trans _) -> //: perm_eq (color_refine h (map1 mu (mark bn.1 col_g))) (color_refine h (mark (mu bn.1) (map1 mu col_g))).
+     apply color_refine_perm_hm.
+     rewrite perm_sym.
+     apply mark_post_rel=> b1 b2.
+     by rewrite !(color_good_hm); [apply mu_inj|..]; apply good_init.
+   have /(perm_trans _) -> //: perm_eq (color_refine (relabeling_seq_triple mu g) (map1 mu (mark bn.1 col_g))) (color_refine h (map1 mu (mark bn.1 col_g))).
+    by apply color_refine_perm_graph.
+   have mu_inj_mhm: {in bnodes_hm (mark bn.1 col_g) &, injective mu}.
+     move=> b1 b2.
+     have good_colg : bnodes_hm col_g =i get_bts g.
+       by apply color_good_hm; apply good_init.
+     by rewrite !(good_mark g) // ?in_part_in_bnodes //; apply mu_inj.
+   by rewrite /hmg perm_sym; apply color_refine_post_rel.
 case: ifP => [htest | hNtest].
-- apply /rdf_leP.
+- apply /rdf_leP; admit.
 - set hh := mark _ _.
-  have /peq_mark/peq_color_refine : perm_eq col_h (map1 mu col_g). by admit.
-  move=> /(_ h (mu b.1)).
-  move=> /(peq_hm_distinguish _ _ h) ->.
-  case: iso_mu=> /and3P[piso urel peq].
+  have /(mark_perm_hm (mu bn.1))/(color_refine_perm_hm h) := peq_col.
+  move=> /(distinguish_perm_hm _ _ h) ->.
   set mk_mu := mark (mu _) _.
-  have /(peq_hm_distinguish _ _ h) <- := peq_graph_color_refine mk_mu _ _ peq.
-  rewrite -(peq_graph_distinguish _ _ h peq) /mk_mu /hh.
+  have /(distinguish_perm_hm _ _ h) <- := color_refine_perm_graph _ _ mk_mu peq.
+  rewrite -(distinguish_perm_graph _ _ h peq) /mk_mu /hh.
 Admitted.
 
 (*
