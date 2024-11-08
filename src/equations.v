@@ -1564,6 +1564,24 @@ case: ifP => [htest | hNtest].
   set mk_mu := mark (mu _) _.
   have /(distinguish_perm_hm _ _ h) <- := color_refine_perm_graph _ _ mk_mu peq.
   rewrite -(distinguish_perm_graph _ _ h peq) /mk_mu /hh.
+  have : perm_eq (color_refine (relabeling_seq_triple mu g) (mark (mu bn.1) (map1 mu col_g))) (color_refine (relabeling_seq_triple mu g) (map1 mu (mark bn.1 col_g))).
+    apply color_refine_perm_hm; apply mark_post_rel=> /= b b'.
+    by rewrite !color_good_hm; [apply mu_inj|..]; apply good_init.
+  move=> /distinguish_perm_hm ->.
+  have : perm_eq (color_refine (relabeling_seq_triple mu g) (map1 mu (mark bn.1 col_g))) (map1 mu (color_refine g (mark bn.1 col_g))).
+    apply color_refine_post_rel=> // b b'.
+    have eq_b_col : bnodes_hm col_g =i get_bts g.
+      by apply color_good_hm; apply good_init.
+    by rewrite !(good_mark g) //; [apply mu_inj|..]; apply in_part_in_bnodes.
+  move=> /distinguish_perm_hm ->.
+  set hm := color_refine _ _.
+  rewrite !distinguish_fold_map.
+  rewrite /distinguish_fold.
+  set cang := (map _ _).
+  set canh := (map _ _).
+  suffices mem_eq : cang =i canh.
+    by rewrite !foldl_idx (eq_big_idem _ _ choose_graph_idem mem_eq).
+  rewrite /cang/canh.
 Admitted.
 
 (*
