@@ -33,15 +33,15 @@ Section Partition.
   (* splits hm according to hash n *)
   Definition partitionate (n : nat) (hm : hash_map) :=
     (filter (eq_hash n) hm, filter (negb \o eq_hash n) hm).
-                                                                                                                                                                                                                                                                                                                                                                                                                                 
+
   Equations? gen_partition (hm : hash_map) : partition by wf (size hm) lt :=
     gen_partition nil := nil;
     gen_partition (bn::l) :=
       ((partitionate bn.2 (bn::l)).1) :: gen_partition (partitionate bn.2 (bn::l)).2.
   Proof.
-    rewrite /= /eq_hash/pred_eq/negb /= eqxx /=.
-    have H := size_filter_le ((fun b : bool => if b then false else true) \o (fun p : B * nat => n == p.2)) l.
-    by apply /ltP; apply : leq_trans H _.
+  rewrite /= /eq_hash/pred_eq/negb /= eqxx /=.
+  have H := size_filter_le ((fun b : bool => if b then false else true) \o (fun p : B * nat => n == p.2)) l.
+  by apply /ltP; apply : leq_trans H _.
   Qed.
 
   Lemma hm_zip (hm : hash_map): hm = zip (map fst hm) (map snd hm).
@@ -1426,15 +1426,73 @@ Hypothesis iso_color_fine_can :
     (* Lemma color_refine_is_perm_hm: perm_hm color_refine. *)
     (* by move=> hm p peq g; rewrite perm_sym; apply color_refine_perm_hm. *)
     (* Qed. *)
+    Lemma size_mem_filter_undup (T : eqType) (s : seq T) (t : T):
+      t \in s -> size (undup s) = (size (undup (filter (negb \o (pred_eq t)) s))).+1.
+    Proof.
+    elim: s=> [//|hd tl IHtl].
+    rewrite /= in_cons=> /orP[].
+    + move=> /eqP H /=; rewrite H {1}/pred_eq eqxx /=.
+      case: ifP; first by move=> x; rewrite IHtl H.
+      move=> neqin /=; rewrite -filter_undup size_filter.
+      suffices /eq_in_count -> : {in (undup tl), (negb \o pred_eq hd) =1 predT}.
+        by congr S.
+      move=> a /= a_in; rewrite /pred_eq.
+      suffices : count_mem a (undup tl) != count_mem hd (undup tl).
+        by move=> /neq_count_mem; rewrite /negb eq_sym.
+      move: neqin; rewrite -mem_undup=> /count_memPn ->.
+      move/count_mem_inP: a_in=> /=.
+      by rewrite -lt0n.
+    + move=> t_in; have /IHtl {}IHtl:= t_in.
+      rewrite /pred_eq /= {1}/negb.
+      case_eq (t == hd); first by move=> /eqP <-; rewrite t_in IHtl.
+      rewrite /==> t_hd_neq.
+      suffices -> : (hd \in tl = (hd \in [seq x <- tl | (negb \o [eta eq_op t]) x])).
+        by case: ifP; rewrite /= ?IHtl //.
+      by rewrite mem_filter /= /negb t_hd_neq.
+    Qed.
 
+    Lemma size_perm_gen_partition (hm p : hash_map):
+      perm_eq (hashes_hm hm) (hashes_hm p) -> size (gen_partition hm) = size (gen_partition p).
+    Proof.
+    suffices rewr: forall (hm : hash_map), size (gen_partition hm) = size (undup (hashes_hm hm)).
+      by rewrite !rewr=> /perm_mem/perm_undup/perm_size ->.
+    move=> {p}hm.
+    have : size hm < S (size hm) by apply ltnSn.
+    move: hm (size hm).+1.
+    move=> hm n; move: n hm=> n.
+    elim: n => [//| n' IHn [//|hd tl]] /= measure.
+      autorewrite with gen_partition=> /=; rewrite eq_hash_refl /=.
+      case: ifP.
+      + move=> /size_mem_filter_undup ->.
+        congr S. rewrite IHn ?filter_map //.
+        by apply: (leq_ltn_trans (size_filter_le _ _) measure).
+      + move=> neq_in /=.
+        have Hn : size [seq x <- tl | (negb \o eq_hash hd.2) x] < n'.
+          by apply: (leq_ltn_trans (size_filter_le _ _) measure).
+        rewrite IHn //; congr S; congr size; congr undup.
+        elim: tl neq_in {measure Hn}=> [//|a tl' IHtl] /=.
+        rewrite in_cons -[_ || _]negbK -[false]negbK=> /negb_inj; rewrite negb_or /=.
+        move=> /andP[neqhda hdnin]; rewrite /eq_hash/pred_eq neqhda /= IHtl //.
+        by move: hdnin; rewrite /negb; case: ifP.
+    Qed.
 
     Lemma perm_hash_eq_fine (hm p : hash_map):
       perm_eq (hashes_hm hm) (hashes_hm p) -> is_fine (gen_partition hm) = is_fine (gen_partition p).
     Proof.
-    move=> /permP count_hashes.
+    move=> count_hashes.
+    (* move=> /permP count_hashes. *)
     rewrite /is_fine.
-   admit.
-   Admitted.
+    rewrite !all_count.
+    suffices -> : count (is_trivial (B:=B)) (gen_partition hm) = count (is_trivial (B:=B)) (gen_partition p).
+      by apply /idP/idP=> /eqP ->; apply /eqP; apply size_perm_gen_partition=> //; rewrite perm_sym.
+    set c1 := count _ _.
+    set c2 := count _ _.
+    have -> : c1 = distinguished hm by [].
+    have -> : c2 = distinguished p by [].
+    rewrite !num_triv_distinguished /num_uniq_hash.
+    rewrite -(permP count_hashes); apply eq_in_count; move=> h hin.
+    by rewrite /mult1 -(permP count_hashes).
+    Qed.
 
 Lemma eiso_mem_eq_canonicalize (g h : seq (triple I B L)) (ug: uniq g) (uh: uniq h) :
             effective_iso_ts g h ->
@@ -1470,13 +1528,9 @@ suffices step b : b \in choose_part col_g -> can_g b = can_h (mu b.1, b.2) by ap
   set hmh := (X in is_fine (gen_partition X)).
   set test_h := is_fine _.
   have -> : test_h = test_g.
-    have perm_hash_eq_fine: forall (hm p : hash_map),
-      perm_eq (hashes_hm hm) (hashes_hm p) -> is_fine (gen_partition hm) = is_fine (gen_partition p).
-   admit.
    suffices /perm_hash_eq_fine : (perm_eq (hashes_hm hmg) (hashes_hm hmh)).
      by rewrite /test_g => ->.
-   rewrite /hmh.
-   rewrite -(hashes_of_map1 hmg mu).
+   rewrite /hmh -(hashes_of_map1 hmg mu).
    apply perm_map.
    suffices step1 : perm_eq (color_refine h (mark (mu b.1) (map1 mu col_g))) hmh.
      apply: (perm_trans _ step1).
