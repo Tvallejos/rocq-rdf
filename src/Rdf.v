@@ -573,7 +573,7 @@ Section Rdf.
           by apply triple_inj=> /=; apply (relabeling_term_inj_terms_ts mu_inj)=> //.
         Qed.
 
-        Lemma eq_in_bs_ing ts (mu nu: B -> B) :
+        Lemma eq_in_bs_ing ts (B1 : Type) (mu nu: B -> B1) :
           {in get_bts ts, mu =1 nu} ->
           {in ts, (relabeling_triple mu) =1 (relabeling_triple nu)}.
         Proof.
@@ -587,6 +587,10 @@ Section Rdf.
             {in ts, [eta relabeling_triple (nu \o mu)] =1 id}.
         Proof. by apply can_bs_can_rtbs. Qed.
 
+
+        Lemma relabeling_seq_triple_ext_in (B1 : Type) (mu1 mu2 : B -> B1) ts :
+        {in (get_bts ts), mu1 =1 mu2} -> relabeling_seq_triple mu1 ts = relabeling_seq_triple mu2 ts.
+        Proof. by move=> mu_eq; apply eq_in_map; apply eq_in_bs_ing. Qed.
 
       End Bnodes_ts.
 
