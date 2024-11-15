@@ -571,6 +571,8 @@ Section Partition.
     Qed.
 
     (* passes the hash_map's keys under mu *)
+    (* Definition map1 (T U R : Type) (f : T -> R) (tus : seq (T * U)) : seq (R * U) := *)
+    (*   zip (map f (map fst tus)) (map snd tus). *)
     Definition map1 (mu : B -> B) (h : hash_map) : hash_map :=
       zip (map mu (map fst h)) (map snd h).
 
@@ -579,6 +581,7 @@ Section Partition.
     Proof. by elim: hm=> [//|hd tl /= ->]. Qed.
 
     Lemma map1_map (mu : B -> B):
+      (* (map1 (U := nat) mu) =1 (map (fun p=> (mu p.1,p.2))). *)
       (map1 mu) =1 (map (fun p=> (mu p.1,p.2))).
     Proof.
     move=> hm; elim: hm=> [//|[b n] tl IHtl] /=.
@@ -873,6 +876,7 @@ Section Template.
       perm_eq g h -> perm_eq (color g hm) (color h hm).
 
   (* hashmaps equal up to permutation yield hashmaps equal up to permutation under color of the same graph *)
+  (* TODO invert order of perm_eq hyp of hashes *)
   Hypothesis color_perm_hm : forall (hm p : hash_map),
       perm_eq p hm -> forall (g : seq (triple I B L)), perm_eq (color g hm) (color g p).
 
@@ -2050,12 +2054,185 @@ Section kmap_template.
 
   Check template_isocan_.
 
+  Lemma eq_map_zip_nseq : forall (T U : Type) (s : seq T) (u : U),
+    map (fun t=> (t,u)) s = zip s (nseq (size s) u).
+  Proof.
+  move=> T U s u.
+  by elim: s=> [//|hd tl IHtl] /=; rewrite IHtl.
+  Qed.
+
+  Lemma map1_zip : forall (T : eqType) (s1 : seq T)(s2 : seq nat) (f : T -> T),
+      size s1 = size s2 ->
+    map1 f (zip s1 s2) = zip (map f s1) s2.
+  Proof.
+  move=> T U s u eq_size.
+  by rewrite /map1 zip_proj1 // map_snd_zip_size.
+  Qed.
+
+  Lemma perm_eq_zip_eql (T U : eqType) (s1 s2 : seq T) (s3 : seq U):
+    size s1 = size s2 ->
+    size s1 = size s3 ->
+    constant s3 ->
+    perm_eq s1 s2 ->
+    perm_eq (zip s1 s3) (zip s2 s3).
+  Proof.
+  case: s2; case: s3; case: s1=> //.
+  move=> a1 tl1 a3 tl3 a2 tl2 /= [eq_size12] [eq_size13] const_s.
+  move=> /(perm_map (fun t=> (t,a3))); rewrite !eq_map_zip_nseq /=.
+  suffices tl3_nseq : (nseq (size tl1) a3) = tl3.
+    by rewrite -eq_size12 !tl3_nseq.
+  rewrite eq_size13.
+  elim: tl3 const_s {eq_size13}=> [//|hd tl IHtl] /=.
+  by move=> /andP[/eqP -> eq_tl]; rewrite IHtl //.
+  Qed.
+
   Definition init_hash_kmap (ts : seq (triple I B L)) : hash_map B :=
     let bs := get_bts ts in
     zip bs (nseq (size bs) 0).
 
   Lemma good_init_kmap (g : seq (triple I B L)) : bnodes_hm (init_hash_kmap g) =i get_bts g.
   Proof. by move=> x; rewrite /init_hash_kmap/bnodes_hm zip_proj1 // size_nseq. Qed.
+
+  Lemma count_get_b_is_bnode (terms : seq (term I B L)) :
+    count (fun x : term I B L => get_b_term x) terms
+    = count (fun x : term I B L => is_bnode x) terms.
+  Proof. by elim: terms=> [//|[]hd tl IHtl]=> //=; rewrite IHtl. Qed.
+
+  Lemma mem_bs_nodes (b : B) (ts : seq (triple I B L)):
+    Bnode b \in node_terms ts -> Bnode b \in bnodes_ts ts.
+  Proof.
+  have /perm_mem -> := bnodes_nodes ts.
+  by rewrite mem_filter=> ->.
+  Qed.
+
+  Lemma size_rel_inj (ts : seq (triple I B L)) (mu : B -> B):
+    {in (get_bts ts)&, injective mu} -> size (get_bts ts) = size (get_bts (relabeling_seq_triple mu ts)).
+  Proof.
+  move=> mu_inj.
+  rewrite /get_bts/get_bs.
+  rewrite !size_pmap.
+  have /permP -> := bnodes_nodes ts.
+  have /permP -> := bnodes_nodes (relabeling_seq_triple mu ts).
+  rewrite !count_get_b_is_bnode.
+  have : perm_eq (node_terms (relabeling_seq_triple mu ts)) (map (relabeling_term mu) (node_terms ts)).
+    rewrite perm_sym.
+    apply perm_undup_map_inj.
+    move=> []trm1 []trm2 => //=.
+    have mem_bs_nodes : forall (b : B) (ts : seq (triple I B L)), Bnode b \in node_terms ts -> Bnode b \in bnodes_ts ts.
+      by apply mem_bs_nodes.
+    move=> /mem_bs_nodes; rewrite bnodes_map_get_bts.
+    rewrite mem_map; last by apply bnode_inj.
+    move=> trm1_in /mem_bs_nodes; rewrite bnodes_map_get_bts mem_map; last by apply bnode_inj.
+    by move=> trm2_in [] /(mu_inj _ _ trm1_in trm2_in) ->.
+    by apply uniq_node_terms.
+      set T := node_terms (relabeling_seq_triple mu ts).
+      have /undup_id <- : uniq T by apply uniq_node_terms.
+      apply perm_undup.
+      rewrite /T.
+      move=> trm.
+      rewrite -mem_map_undup.
+      rewrite mem_undup.
+      move=> {mu_inj T}.
+      elim: ts=> [//|hd tl IHtl].
+      rewrite /=.
+      by rewrite projs_rel projo_rel !in_cons IHtl.
+  move=> /permP idea.
+  rewrite -!count_filter.
+  rewrite idea.
+  elim: (node_terms ts)=> [//| hd tl IHtl].
+  rewrite /= IHtl; congr addn.
+  by case: hd.
+  Qed.
+
+  Lemma init_hash_inj_rel_kmap :
+    forall (g : seq (triple I B L)) (mu : B -> B),
+      {in get_bts g &, injective mu} ->
+      perm_eq (map1 mu (init_hash_kmap g)) (init_hash_kmap (relabeling_seq_triple mu g)).
+  Proof.
+  move=> g mu mu_inj.
+  rewrite /init_hash_kmap.
+  have eq_size : size (get_bts g) = size (nseq (size (get_bts g)) 0) by rewrite size_nseq.
+  rewrite map1_zip //.
+  have eq_num_bs: size (get_bts g) = size (get_bts (relabeling_seq_triple mu g)).
+    by apply size_rel_inj.
+  rewrite -eq_num_bs; apply perm_eq_zip_eql.
+  by rewrite -eq_num_bs size_map.
+  by rewrite size_map -eq_size.
+  apply constant_nseq.
+  apply perm_eq_bts_relabel_inj_in=> //.
+  Qed.
+
+  Lemma init_hash_perm_graph_kmap : forall g h : seq (triple I B L), perm_eq g h -> perm_eq (init_hash_kmap g) (init_hash_kmap h).
+  Proof.
+  move=> g h peq.
+  rewrite /init_hash_kmap.
+  have /peq_get_bts/perm_size eq_size := peq.
+  rewrite eq_size.
+  apply perm_eq_zip_eql=> //.
+  by rewrite size_nseq eq_size.
+  apply constant_nseq.
+  by apply peq_get_bts.
+  Qed.
+
+  Lemma init_hash_ubs_kmap : forall g : seq (triple I B L), uniq (bnodes_hm (init_hash_kmap g)).
+  Proof.
+  move=> g; rewrite /init_hash_kmap/bnodes_hm.
+  by rewrite map_fst_zip_size ?uniq_get_bts // size_nseq.
+  Qed.
+
+  Lemma has_eq_bnodes_in : forall (hm : hash_map B) (b : B),
+      has (eq_bnode B b) hm = (b \in (bnodes_hm hm)).
+  Proof.
+  move=> hm b.
+  elim: hm=> [//|hd tl IHtl] /=.
+  by rewrite /eq_bnode/pred_eq/= in_cons IHtl.
+  Qed.
+
+  Lemma init_hash_inv_kmap : forall g : seq (triple I B L), good_hash_map_for I L nat_inj g (init_hash_kmap g).
+  Proof.
+  move=> g.
+  rewrite /good_hash_map_for.
+  set s := get_bts g.
+  move=> mu mu_inj b bin.
+  rewrite /init_hash_kmap -/s.
+  rewrite map1_map.
+  rewrite -eq_map_zip_nseq -map_comp.
+  rewrite /fun_of_hash_map/=.
+  rewrite !has_eq_bnodes_in.
+  suffices -> : bnodes_hm [seq (t,0) | t <- s] = s.
+    suffices -> : bnodes_hm [seq ((fun p : B * nat => (mu p.1, p.2)) \o pair^~ 0) i | i <- s]
+                            = map mu s.
+    rewrite bin.
+    rewrite map_f //. congr nat_inj.
+    set hm1 := [seq ((fun p : B * nat => (mu p.1, p.2)) \o pair^~ 0) i | i <- s].
+    set hm2 := [seq (t, 0) | t <- s].
+    rewrite {2}(hm_zip hm1).
+    rewrite {2}(hm_zip hm2).
+    rewrite !find_index_eq_bnode.
+    suffices -> :[seq i.2 | i <- hm1]  = nseq (size hm1) 0.
+    suffices -> :[seq i.2 | i <- hm2]  = nseq (size hm2) 0.
+    suffices -> : size hm1 = size hm2.
+    rewrite !nth_nseq.
+    by case: ifP; case: ifP.
+    by rewrite !size_map.
+    rewrite /hm2 size_map.
+    elim: s {mu_inj bin hm1 hm2}=> [//|hd tl IHtl].
+    by rewrite /= IHtl.
+    rewrite /hm1 size_map.
+    elim: s {mu_inj bin hm1 hm2}=> [//|hd tl IHtl].
+    by rewrite /= IHtl.
+    by rewrite !size_map.
+    by rewrite !size_map.
+    by elim: s {mu_inj bin}=> [//|hd tl IHtl] /=; rewrite IHtl.
+    by elim: s {mu_inj bin}=> [//|hd tl IHtl] /=; rewrite IHtl.
+  Qed.
+
+  (* (choose_part : hash_map B -> part B) (choose_hash : hash_map B -> nat) *)
+  (* (choose_part_order : forall hm1 hm2 : hash_map B, *)
+  (*                     perm_eq (hashes_hm hm1) (hashes_hm hm2) -> perm_eq (choose_part hm1) (choose_part hm2)) *)
+  (* (choose_part_post_relabeling : forall (hm : hash_map B) (mu : B -> B), choose_part (map1 mu hm) = map1 mu (choose_part hm)) *)
+  (* (in_part_in_hm : forall (bn : B * nat) (hm : hash_map B), bn \in choose_part hm -> bn \in hm) *)
+  (* (choose_from_not_fine : forall hm : hash_map B, ~~ is_fine (gen_partition hm) -> (choose_part hm == [::]) = false) *)
 
   Definition choose_part_kmap (hm : hash_map B) : part B :=
     let P := gen_partition (hm) in
@@ -2078,13 +2255,51 @@ Section kmap_template.
 
   Definition color_kmap : seq (triple I B L) -> hash_map B -> hash_map B := fun _ hm=> hm.
   Definition color_refine_kmap : seq (triple I B L) -> hash_map B -> hash_map B := fun _ hm=> hm.
+
   Lemma color_good_hm_kmap (g : seq (triple I B L)) (hm : hash_map B):
     bnodes_hm hm =i get_bts g -> bnodes_hm (color_kmap g hm) =i get_bts g.
   Proof. by []. Qed.
 
-  Lemma color_refine_good_hm_kmap (g : seq (triple I B L)) (hm : hash_map B) :
-    bnodes_hm hm =i get_bts g -> bnodes_hm (color_refine_kmap g hm) =i get_bts g.
-  Proof. by []. Qed.
+  Lemma color_inv_kmap : forall (g : seq (triple I B L)) (hm : hash_map B),
+              good_hash_map_for I L nat_inj g hm -> good_hash_map_for I L nat_inj g (color_kmap g hm).
+  Proof. move=> g hm H1 mu ghf b bin; by apply H1. Qed.
+
+  Lemma color_post_relabeling_kmap : forall (g : seq (triple I B L)) (mu : B -> B) (hm : hash_map B),
+                          {in get_bts g &, injective mu} ->
+                          {in bnodes_hm hm &, injective mu} ->
+                          perm_eq (color_kmap (relabeling_seq_triple mu g) (map1 mu hm)) (map1 mu (color_kmap g hm)).
+  Proof. move=> g mu hm mu_inj_bs mu_inj_hm; by apply perm_refl. Qed.
+
+  Lemma color_perm_graph_kmap :
+    forall (g h : seq (triple I B L)) (hm : hash_map B), perm_eq g h -> perm_eq (color_kmap g hm) (color_kmap h hm).
+  Proof. by move=> g h hm peq; apply perm_refl. Qed.
+
+  Lemma color_perm_hm_kmap :
+    forall hm p : hash_map B,
+      perm_eq p hm ->
+      forall g : seq (triple I B L), perm_eq (color_kmap g hm) (color_kmap g p).
+  Proof. by move=> hm p peq g; rewrite perm_sym. Qed.
+
+  Lemma color_ubs_kmap :
+    forall (hm : hash_map B) (g : seq (triple I B L)),
+      uniq (bnodes_hm hm) -> uniq (bnodes_hm (color_kmap g hm)).
+  Proof. by move=> hm g ubs. Qed.
+
+  Lemma color_refine_good_hm_kmap : forall (g : seq (triple I B L)) (hm : hash_map B),
+                          bnodes_hm hm =i get_bts g -> bnodes_hm (color_refine_kmap g hm) =i get_bts g.
+  Proof. by apply color_good_hm_kmap. Qed.
+
+  Lemma color_refine_inv_kmap : forall (g : seq (triple I B L)) (hm : hash_map B),
+                      good_hash_map_for I L nat_inj g hm -> good_hash_map_for I L nat_inj g (color_refine_kmap g hm).
+  Proof. by apply color_inv_kmap. Qed.
+
+  Lemma color_refine_post_relabeling_kmap : forall (g : seq (triple I B L)) (hm : hash_map B) (mu : B -> B),
+                                  {in get_bts g &, injective mu} ->
+                                  {in bnodes_hm hm &, injective mu} ->
+                                  perm_eq (color_refine_kmap (relabeling_seq_triple mu g) (map1 mu hm))
+                                    (map1 mu (color_refine_kmap g hm)).
+  Proof. by move=> g hm mu ? ? ; apply color_post_relabeling_kmap. Qed.
+
 
   Definition mark_hash_kmap_2 (b : B) (n : nat) (hm : hash_map B) :=
     set_nth (b,n) hm (find (eq_bnode B b) hm) (b,n).
@@ -2133,12 +2348,14 @@ Section kmap_template.
   by rewrite mark_hash_kmap_bnodes //; apply mem_eq.
   Qed.
 
-  (* Definition template_isocan__ := @template_isocan_
-                                    init_hash_kmap good_init_kmap choose_part_kmap in_part_in_bnodes_kmap
-                                    color_kmap color_refine_kmap color_good_hm_kmap color_refine_good_hm_kmap
-                                    mark_kmap_2 good_mark_kmap M_kmap.
+  Definition template_isocan__ := @template_isocan_
+                                    init_hash_kmap good_init_kmap
+                                    init_hash_inj_rel_kmap
+                                    init_hash_perm_graph_kmap
+                                    init_hash_ubs_kmap
+                                    init_hash_inv_kmap.
 
-  Check template_isocan__. *)
+  Check template_isocan__.
 
   Lemma mark_size (b : B) (hm : hash_map B) :
     b \in (bnodes_hm hm) ->
@@ -2327,7 +2544,7 @@ Section kmap_template.
            rewrite /n0'.
            set b := nth _ _ _.
            suffices count_mem_b : count_mem b hs > 1.
-             apply: negPf; apply (neq_count_mem hs).
+             apply: negPf; rewrite /pred1/=; apply (@neq_count_mem _ _ _ hs).
              by apply /negPf; apply gtn_eqF; rewrite eq.
            set p := choose_part_kmap hm.
            have in_P: p \in gen_partition hm.
@@ -2420,6 +2637,46 @@ Section kmap_template.
   by apply distinguished_mark.
   Qed.
 
+  (* Lemma mark_inv_kmap : forall (g : seq (triple I B L)) (hm : hash_map B) (b : B), *)
+  (*                    b \in get_bts g -> good_hash_map_for I L nat_inj g hm -> good_hash_map_for I L nat_inj g (mark_kmap_2 b hm). *)
+  (* Proof. *)
+  (* move=> g hm b bin ghf. *)
+  (* move=> mu mu_inj_bs b' b'in. *)
+
+  Lemma mark_post_rel : forall (b : B) (hm : hash_map B) (mu : B -> B),
+                          {in bnodes_hm hm &, injective mu} -> perm_eq (mark_kmap_2 (mu b) (map1 mu hm)) (map1 mu (mark_kmap_2 b hm)).
+  Proof.
+  move=> b hm mu mu_inj.
+  Admitted.
+  Lemma mark_perm_hm : forall (b : B) (hm p : hash_map B), perm_eq hm p -> perm_eq (mark_kmap_2 b hm) (mark_kmap_2 b p).
+  Proof.
+  move=> b hm p peq.
+  rewrite /mark_kmap_2.
+  rewrite /mark_hash_kmap_2.
+  Admitted.
+
+  Lemma mark_eq_bnodes :
+    forall hm : hash_map B,
+      (* uniq (bnodes_hm hm) -> *)
+      forall b : B, b \in bnodes_hm hm -> bnodes_hm hm = bnodes_hm (mark_kmap_2 b hm).
+  Proof.
+  move=> hm b bin.
+  rewrite /mark_kmap_2/mark_hash_kmap_2 set_nthE.
+  rewrite -has_find has_eq_bnodes_in bin.
+  Admitted.
+
+
+  Lemma mark_ubs :
+    forall hm : hash_map B,
+      uniq (bnodes_hm hm) -> forall b : B, b \in bnodes_hm hm -> uniq (bnodes_hm (mark_kmap_2 b hm)).
+  Proof.
+  move=> hm ubs b bin.
+  rewrite /mark_kmap_2.
+  rewrite /mark_hash_kmap_2.
+  rewrite set_nthE.
+  rewrite -has_find.
+  rewrite has_eq_bnodes_in bin.
+  Admitted.
 
   Lemma color_refineP_kmap (g : seq (triple I B L)) (hm : hash_map B) : M_kmap (color_refine_kmap g hm) <= M_kmap hm.
   Proof. by []. Qed.
@@ -2438,6 +2695,7 @@ Section kmap_template.
   apply relabeling_ext_in=> /= t' t'ing.
   have := map_f (relabeling_triple mu) t'ing.
   rewrite (perm_mem peq)=> mut'inh.
+
   apply: eq_in_bs_ing; last by apply t'ing.
   move=> b bin /=.
   have mub_in := map_f mu bin.
