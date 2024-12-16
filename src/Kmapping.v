@@ -10,7 +10,7 @@ From RDF Require Export Rdf Triple Term Util IsoCan.
 (*                                                                            *)
 (******************************************************************************)
 Section Kmapping.
-  Variable disp : unit.
+  Variable disp : Order.disp_t.
   Variable I B L : orderType disp.
   Hypothesis nat_inj : nat -> B.
   Hypothesis nat_inj_ : injective nat_inj.

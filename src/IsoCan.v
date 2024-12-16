@@ -57,14 +57,14 @@ HB.instance Definition _ (H T: choiceType):= [Choice of hash H T by <: ].
 HB.instance Definition _ (H T : countType) := [Countable of hash H T by <:].
 
 Section IsoCan.
-  Variable disp: unit.
+  Variable disp: Order.disp_t.
   Variable I B L: orderType disp.
 
   Implicit Type trm : term I B L.
 
   Section inter.
 
-  Variable disp2 : unit.
+  Variable disp2 : Order.disp_t.
   Variable h : orderType disp2.
   Local Notation hash := (hash h).
 

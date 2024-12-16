@@ -1480,7 +1480,7 @@ Section Rdf.
 
   End ChoiceTs.
   Section OrderTs.
-  Variables d : unit.
+  Variables d : Order.disp_t.
   Variables I B L : orderType d.
 
   Notation le_triple := (@le_triple d I B L).
@@ -1643,16 +1643,16 @@ Section Rdf.
 
 
   End OrderTs.
-  Fact ts_display : unit. exact tt. Qed.
+  Fact ts_display : Order.disp_t. exact: Order.Disp tt tt. Qed.
 
-  HB.instance Definition _ (d : unit) (I B L : orderType d):=
+  HB.instance Definition _ (d : Order.disp_t) (I B L : orderType d):=
     Monoid.isComLaw.Build
       (seq (triple I B L)) [::]
       (@join_st d I B L) (@join_stA d I B L)
       (@join_st_comm d I B L)
       (@join_st_nil_idl d I B L).
 
-HB.instance Definition _ (d : unit) (I B L: orderType d):=
+HB.instance Definition _ (d : Order.disp_t) (I B L: orderType d):=
   Order.isOrder.Build ts_display (seq (triple I B L))
     (@lt_st_def d I B L) (@meet_st_def d I B L) (@join_st_def d I B L)
     (@le_st_anti d I B L) (@le_st_trans d I B L) (@le_st_total d I B L).
@@ -1670,7 +1670,7 @@ Lemma minn_refl n : minn n n = n.
 Proof. by rewrite /minn; case e: (_ < _)%N. Qed.
 
 Section OrderRdf.
-  Variables d : unit.
+  Variables d : Order.disp_t.
   Variables I B L : orderType d.
 
   Notation le_triple := (@le_triple d I B L).

@@ -4,7 +4,7 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 Import Order.Theory.
-Open Scope order_scope.
+Local Open Scope order_scope.
 
 (* Lemmas complementing math-comp theories *)
 
@@ -68,7 +68,7 @@ Proof. elim : s => [| a t IHts] u /=; first by rewrite in_nil.
               - by apply: IHts y.
 Qed.
 
-Lemma foldl_min (disp: unit) (T: porderType disp) (l: seq T) (x0 : T) :
+Lemma foldl_min (disp : Order.disp_t) (T: porderType disp) (l: seq T) (x0 : T) :
   foldl Order.min x0 l = x0 \/ foldl Order.min x0 l \in l.
 Proof. elim: l x0 => [ | t ts IHts] x0; first by left.
        + rewrite in_cons /=; case: (IHts (Order.min x0 t))=> [ -> |intail] /=.
@@ -77,7 +77,7 @@ Proof. elim: l x0 => [ | t ts IHts] x0; first by left.
        - by right; rewrite intail orbT.
 Qed.
 
-Lemma foldl_max (disp: unit) (T: porderType disp) (l: seq T) (x0 : T) :
+Lemma foldl_max (disp: Order.disp_t) (T: porderType disp) (l: seq T) (x0 : T) :
   foldl Order.max x0 l = x0 \/ foldl Order.max x0 l \in l.
 Proof. elim: l x0 => [ | t ts IHts] x0; first by left.
        + rewrite in_cons /=; case: (IHts (Order.max x0 t))=> [ -> |intail] /=.
@@ -116,7 +116,7 @@ Qed.
 Open Scope order_scope.
 
 Lemma max_foldlP:
-  forall [disp : unit] [T : orderType disp] (l : seq T) (x y : T),
+  forall [disp : Order.disp_t] [T : orderType disp] (l : seq T) (x y : T),
     (foldl Order.max x l) = y -> (x <= y) && all (fun z=> z <= y) l.
 Proof. move=> d T l x y.
        elim: l x=> [z /= -> //| hd t IHt]; first by rewrite Order.POrderTheory.lexx.
@@ -128,7 +128,7 @@ Proof. move=> d T l x y.
 Qed.
 
 Lemma max_foldl_minimum:
-  forall [disp : unit] [T : porderType disp] (l : seq T) (x : T),
+  forall [disp : Order.disp_t] [T : porderType disp] (l : seq T) (x : T),
     (forall y, x <= y) -> foldl Order.max x l = x -> ((l == [::]) || (x \in l)).
 Proof. move=> d T l x minimum.
        elim: l=> [//| hd t IHt].
@@ -287,7 +287,7 @@ Lemma min_sym : symmetric Order.min.
 Proof. by move=> x y; rewrite Order.POrderTheory.minEle Order.POrderTheory.minElt Order.TotalTheory.leNgt; case: (y < x)%O.
 Qed.
 
-Lemma order_le_neq_antisym (disp : unit) (T : orderType disp) (x y : T) : x != y -> (x <= y) == ~~ (y <= x).
+Lemma order_le_neq_antisym (disp : Order.disp_t) (T : orderType disp) (x y : T) : x != y -> (x <= y) == ~~ (y <= x).
 Proof. rewrite neq_lt !leNgt=> /orP[] lxy; rewrite lxy -leNgt /=; apply /eqP.
        by apply ltW.
        rewrite leNgt negbK; apply/eqP; rewrite eq_sym; apply /eqP.
@@ -417,7 +417,7 @@ HB.about isFinite.Build.
 Lemma in_map_injP' (T1 : choiceType) (T2 : choiceType) (s : seq T1) (f : T1 -> T2) (us: uniq s):
   reflect {in s&, injective f} (uniq (map f s)).
 Proof.
-  pose T := [finType of (seq_sub s)].
+  pose T : finType := (seq_sub s).
   pose g := finfun (fun (x:T) =>  f (\val x)).
   have eq_fg: forall (t:T1) (tin:(t \in s)), f t = (g (@Sub T1 _ T t tin)).
     by move=> t tin; rewrite ffunE SubK.

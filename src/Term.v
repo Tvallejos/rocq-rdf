@@ -6,7 +6,7 @@ Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 From RDF Require Import Util.
 Import Order.Theory.
-Open Scope order_scope.
+Local Open Scope order_scope.
 
 (******************************************************************************)
 (* This file defines RDF terms by parameterizing three types for its          *)
@@ -273,7 +273,7 @@ Section EqTerm.
 
 End EqTerm.
 
-Fact term_display : unit. exact tt. Qed.
+Fact term_display : Order.disp_t. exact: Order.Disp tt tt. Qed.
 
 Section ChoiceTerm.
 
@@ -301,7 +301,7 @@ End CountTerm.
     isCountable.Build (term I B L) (@codeK_term I B L).
 
 Section OrderTerm.
-  Variable d : unit.
+  Variable d : Order.disp_t.
   Variables I B L : orderType d.
 
   Definition le_term : rel (term I B L) :=
@@ -360,7 +360,7 @@ Section OrderTerm.
 
 End OrderTerm.
 
-HB.instance Definition _ (d : unit) (I B L: orderType d):=
+HB.instance Definition _ (d : Order.disp_t) (I B L: orderType d):=
   Order.isOrder.Build term_display (term I B L)
     (@lt_term_def d I B L) (@meet_term_def d I B L) (@join_term_def d I B L)
     (@le_term_anti d I B L) (@le_term_trans d I B L) (@le_term_total d I B L).
