@@ -749,7 +749,7 @@ Lemma index_bnodes (hm : seq (B * nat)) (b : B) (n : nat) :
 Proof.
 move=> hin huniq.
 rewrite -[X in index X (bnodes_hm _)]/((b,n).1) index_map_in // {b n hin}.
-move=> u v uin vin e.
+move=> /= u v uin vin e.
 pose i := index u hm.
 pose j := index v hm.
 suff eij : i = j by rewrite -(nth_index u uin) -(nth_index u vin) -/i eij.
@@ -771,10 +771,10 @@ suff e : index (b, n1) hm = index (b, n2) hm.
 by rewrite !index_bnodes.
 Qed.
 
-Lemma find_eq_bnode (hm : seq (B * nat)) b : uniq (bnodes_hm hm) -> 
+Lemma find_eq_bnode (hm : seq (B * nat)) b : 
   find (eq_bnode b) hm = index b (bnodes_hm hm).
 Proof.
-move=> ubhm.
+(* move=> ubhm.*)
 by rewrite [hm]hm_zip find_index_eq_bnode ?size_map // -hm_zip.
 Qed.
 
@@ -1031,7 +1031,9 @@ Lemma fun_of_hash_perm (hm p : hash_map) :
 
   Hypothesis mark_inv :
     forall (g : seq (triple I B L)) (hm : hash_map) (b : B),
+    get_bts g =i bnodes_hm hm ->
       b \in (get_bts g) ->
+       uniq (bnodes_hm hm) ->
         good_hash_map_for g hm ->
           good_hash_map_for g (mark b hm).
 
@@ -2019,7 +2021,7 @@ Definition distinguish_ (g : seq (triple I B L)) (hm : hash_map) : seq (triple I
             have -> : map1 mu (color_refine g (mark bn.1 hm)) (mu bb1) = (map1 mu (color_refine g (mark bn.1 hm)) \o mu) bb1 by [].
             have -> : map1 mu (color_refine g (mark bn.1 hm)) (mu bb2) = (map1 mu (color_refine g (mark bn.1 hm)) \o mu) bb2 by [].
             have ghm : good_hash_map_for g hmg.
-              by apply color_refine_inv; apply mark_inv; first by rewrite -mem_eq_bs; apply in_part_in_bnodes.
+              by apply color_refine_inv; apply mark_inv=> //; first by rewrite -mem_eq_bs; apply in_part_in_bnodes.
             rewrite !ghm //.
             by move /hmg_inj=> /(_ bb1in bb2in) ->.
             have := perm_refl (relabeling_seq_triple mu g).
@@ -2771,30 +2773,55 @@ Definition distinguish_ (g : seq (triple I B L)) (hm : hash_map) : seq (triple I
     by apply size_gen_partition.
   by apply distinguished_mark.
   Qed.
-
-  Lemma mark_inv_kmap (g : seq (triple I B L)) (hm : hash_map) :
+About mark_inv.
+  Lemma mark_inv_kmap (g : seq (triple I B L)) (hm : hash_map) b :
       (* claim: we need new hypothesis get_bts =i bnodes_hm hm *)
       get_bts g =i bnodes_hm hm -> (* new hypothesis *)
-      forall (b : B),
-      b \in get_bts g -> good_hash_map_for g hm -> 
+      b \in get_bts g -> 
+      uniq (bnodes_hm hm) ->
+      good_hash_map_for g hm ->
         good_hash_map_for g (mark_kmap_2 b hm). 
   Proof.
-  move=> mem_eq b bin ghf.
+  move=> mem_eq bin huniq ghf.
   move=> mu mu_inj_bs b' b'in.
-  rewrite /mark_kmap_2/mark_hash_kmap_2.
+  rewrite /mark_kmap_2 /mark_hash_kmap_2.
   set i := find _ _.
   set v := (b, fresh hm).
   rewrite {1}set_nthE -has_find has_eq_bnodes_in -mem_eq bin.
-  have -> : take i hm ++ v :: drop i.+1 hm = set_nth v hm i v.
+  have e : take i hm ++ v :: drop i.+1 hm = set_nth v hm i v.
     by rewrite set_nthE -has_find has_eq_bnodes_in -mem_eq bin.
-  rewrite /good_hash_map_for in ghf.
+  rewrite e.
+  (* have {ghf} ghf := (ghf mu mu_inj_bs).*)
   set almost_hm := set_nth _ _ _ _.  
   rewrite /fun_of_hash_map /=.
-  
-Search _ eq nth.
-
-  (* wish: to apply ghf *)
-  Admitted.
+  have b'in_almost : b' \in bnodes_hm almost_hm.
+    rewrite -[almost_hm]e.
+    move: b'in; rewrite mem_eq -{1}[hm](cat_take_drop i).
+    rewrite /bnodes_hm !map_cat !mem_cat; case/orP; first by move->.
+    rewrite -[drop i _](cat_take_drop 1) drop_drop add1n map_cat mem_cat /=.
+    case/orP=> /= hb'; last by rewrite mem_cons // orbT.
+    suff -> : b = b' by rewrite inE eqxx orbT.
+    move: hb'.
+    rewrite [i]find_eq_bnode.
+    have/bnodes_hm_exists[n hn] : b \in bnodes_hm hm by rewrite -mem_eq.
+    rewrite -(index_bnodes _ _ n) //.
+    by rewrite drop_index //= take0 /= in_cons orbF; move/eqP.
+  have mu_inj_set : {in bnodes_hm almost_hm &, injective mu}.
+    move=> x y. 
+    suff aux t : t \in bnodes_hm almost_hm -> t \in bnodes_hm hm. 
+      by move/aux => hx /aux hy; apply: mu_inj_bs; rewrite ?mem_eq.
+    rewrite -[almost_hm]e /bnodes_hm !map_cat.
+    rewrite !mem_cat map_cons; case/orP.
+    - by apply: mem_subseq; apply: map_subseq; exact: take_subseq.
+    rewrite in_cons; case/orP.
+    - by move/eqP->; rewrite -/(bnodes_hm hm) -mem_eq.
+    by apply: mem_subseq; apply: map_subseq; exact: drop_subseq.
+  rewrite /almost_hm set_nthE -has_find has_eq_bnodes -mem_eq bin e.
+  rewrite bnodes_hm_index_size; last by rewrite map1_bnodesC ?map_f.
+  rewrite bnodes_hm_index_size //; congr nat_inj.
+  rewrite map1_bnodesC map1_map (nth_map (b',0)) /= index_map_in //.
+  by rewrite bnodes_hm_index_ltn.
+  Qed.
 
   Lemma fresh_map1 (hm : hash_map) (mu : B -> B):
     fresh hm = fresh (map1 mu hm).
