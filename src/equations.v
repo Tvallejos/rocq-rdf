@@ -1043,7 +1043,10 @@ Lemma fun_of_hash_perm (hm p : hash_map) :
          {in (bnodes_hm hm)&, injective mu} ->
          perm_eq (mark (mu b) (map1 mu hm)) (map1 mu (mark b hm)).
 
-  Hypothesis mark_perm_hm : forall (b : B) (hm p : hash_map), perm_eq hm p -> perm_eq (mark b hm) (mark b p).
+  Hypothesis mark_perm_hm : forall (b : B) (hm p : hash_map), 
+  uniq (bnodes_hm hm) ->
+  b \in bnodes_hm hm ->
+  perm_eq hm p -> perm_eq (mark b hm) (mark b p).
 
   (* Marking a hashmap with one of its bnodes does not change its bnodes (but only the hashes)*)
   (* TODO : use hash_map_for *)
@@ -1568,7 +1571,6 @@ Definition distinguish_ (g : seq (triple I B L)) (hm : hash_map) : seq (triple I
     by apply perm_map_inj; apply nat_inj_.
     Qed.
 
-    (*not yet used*)
     Lemma distinguish_perm_hm : forall (hm p : hash_map) g,
         (uniq (bnodes_hm hm)) ->
         ~~ is_fine (gen_partition hm) ->
@@ -1599,7 +1601,8 @@ Definition distinguish_ (g : seq (triple I B L)) (hm : hash_map) : seq (triple I
       rewrite /canonicalize.
       have peq_cr :
         perm_eq (color_refine g (mark bn.1 hm)) (color_refine g (mark bn.1 p)).
-        by apply color_refine_perm_hm; apply mark_perm_hm.
+        apply color_refine_perm_hm; apply mark_perm_hm=> //. 
+        exact: in_part_in_bnodes.
       have /(perm_map snd)/perm_hash_eq_fine -> := peq_cr.
       case: ifP=> [fine| /negP/negP finePn].
       - apply /rdf_leP.
@@ -1610,8 +1613,8 @@ Definition distinguish_ (g : seq (triple I B L)) (hm : hash_map) : seq (triple I
         apply: fun_of_hash_perm.
         + suff : uniq (bnodes_hm (color_refine g (mark bn.1 hm))) by [].
           by apply color_refine_ubs; apply mark_ubs=> //; apply in_part_in_bnodes.
-        + apply color_refine_perm_hm.
-          by apply mark_perm_hm.
+        + apply color_refine_perm_hm; apply mark_perm_hm=> //.
+        exact: in_part_in_bnodes.
         + rewrite color_refine_good_hm; first by rewrite -mem_eq.
           by apply good_mark=> //; apply in_part_in_bnodes.
       - rewrite (IHn _ _ _ _ _ _ peq_cr) //.
@@ -1932,7 +1935,8 @@ Definition distinguish_ (g : seq (triple I B L)) (hm : hash_map) : seq (triple I
            by rewrite /test_g => ->.
          rewrite /hmh -(hashes_of_map1 hmg mu); apply perm_map.
          have /(perm_trans _) -> // : perm_eq (color_refine (relabeling_seq_triple mu g) (mark (mu bn.1) (map1 mu hm))) hmh.
-           by apply color_refine_perm_hm; apply mark_perm_hm.
+           apply color_refine_perm_hm; apply mark_perm_hm=> //.
+           rewrite map1_bnodesC map_f //; exact: in_part_in_bnodes.
          have /(perm_trans _) -> //: perm_eq (color_refine (relabeling_seq_triple mu g) (map1 mu (mark bn.1 hm))) (color_refine (relabeling_seq_triple mu g) (mark (mu bn.1) (map1 mu hm))).
            apply color_refine_perm_hm; rewrite perm_sym.
            have H := in_part_in_bnodes _ _ hb.
@@ -2773,8 +2777,8 @@ Definition distinguish_ (g : seq (triple I B L)) (hm : hash_map) : seq (triple I
     by apply size_gen_partition.
   by apply distinguished_mark.
   Qed.
-About mark_inv.
-  Lemma mark_inv_kmap (g : seq (triple I B L)) (hm : hash_map) b :
+
+Lemma mark_inv_kmap (g : seq (triple I B L)) (hm : hash_map) b :
       (* claim: we need new hypothesis get_bts =i bnodes_hm hm *)
       get_bts g =i bnodes_hm hm -> (* new hypothesis *)
       b \in get_bts g -> 
