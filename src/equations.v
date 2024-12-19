@@ -742,7 +742,7 @@ rewrite (nth_map v) ?index_ltn // ?take_size //.
 by rewrite !nth_index.
 Qed.
 
-Lemma index_bnodes (hm : seq (B * nat)) (b : B) (n : nat) :
+Lemma index_bnodes {hm : seq (B * nat)} {b : B} {n : nat} :
   (b, n) \in hm -> 
   uniq (bnodes_hm hm) ->
   index (b, n) hm = index b (bnodes_hm hm).
@@ -801,8 +801,8 @@ Lemma fun_of_hash_perm (hm p : hash_map) :
   have bkp : (b, k) \in p by rewrite  -(perm_mem eq_hm_p).
   have huniqp : uniq (bnodes_hm p).
     by move/perm_eq_bnodes_hm/perm_uniq : eq_hm_p<-.
-  rewrite /x -[i](index_bnodes _ _ k)=> //. 
-  rewrite /y -[j](index_bnodes _ _ k) //.
+  rewrite /x -[i](index_bnodes bkhm)=> //. 
+  rewrite /y -[j](index_bnodes bkp) //.
   by rewrite !nth_index.
   Qed.
 
@@ -2804,7 +2804,7 @@ About mark_inv.
     move: hb'.
     rewrite [i]find_eq_bnode.
     have/bnodes_hm_exists[n hn] : b \in bnodes_hm hm by rewrite -mem_eq.
-    rewrite -(index_bnodes _ _ n) //.
+    rewrite -(index_bnodes hn) //.
     by rewrite drop_index //= take0 /= in_cons orbF; move/eqP.
   have mu_inj_set : {in bnodes_hm almost_hm &, injective mu}.
     move=> x y. 
@@ -2856,24 +2856,42 @@ About mark_inv.
   by rewrite !foldl_idx (eq_big_idem _ _ maxnn mem_eq).
   Qed.
 
-  Lemma mark_perm_hm_kmap : forall (b : B) (hm p : hash_map),
+  Lemma mark_perm_hm_kmap (b : B) (hm p : hash_map) :
       (* claim: we need new hypothesis b \in bnodes_hm and uniq (bnodes_hm hm)*)
+      uniq (bnodes_hm hm) ->
       b \in bnodes_hm hm ->
-      perm_eq hm p -> perm_eq (mark_kmap_2 b hm) (mark_kmap_2 b p).
+      perm_eq hm p -> 
+      perm_eq (mark_kmap_2 b hm) (mark_kmap_2 b p).
   Proof.
-  move=> b hm p bin peq.
+  move=> uniq_bn binhm peq.
   rewrite /mark_kmap_2.
   rewrite /mark_hash_kmap_2.
   rewrite {3}(hm_zip hm) {3}(hm_zip p) !find_index_eq_bnode ?size_proj //.
   rewrite (fresh_perm _ _ (perm_mem (perm_map snd peq))).
-  set v := (b, fresh hm).
-  (* rewrite !set_nthE. *)
-  (* have ->: size hm = size (map fst hm) by rewrite size_map. *)
-  (* have ->: size p = size (map fst p) by rewrite size_map. *)
-  (* rewrite !index_mem -(perm_mem (perm_map fst peq)) !bin. *)
-  (* apply /permP=> /= bn. *)
-  (* rewrite !count_cat. *)
-  Admitted.
+  set v := (b, fresh hm). 
+  set k := index _ _.
+  set l := index _ _.
+  have peq_bnodes : perm_eq (bnodes_hm hm) (bnodes_hm p).
+    exact: perm_eq_bnodes_hm.
+  have binp : b \in bnodes_hm p by rewrite -(perm_mem peq_bnodes).    
+  rewrite !set_nthE !bnodes_hm_index_ltn //.
+  suff step : perm_eq (take k hm ++ drop k.+1 hm) (take l p ++ drop l.+1 p).
+    rewrite -[(b, fresh _) :: _]/([:: _] ++ _) perm_catCA.
+    rewrite -[X in take l p ++ X]/([:: _] ++ _) perm_sym perm_catCA perm_sym.
+    by rewrite (perm_catl _ step).
+  have ep : p = take l p ++ [:: nth v p l] ++ drop l.+1 p.
+    by rewrite -[LHS](cat_take_drop l) (drop_nth v) // bnodes_hm_index_ltn.
+  have ehm : hm = take k hm ++ [:: nth v hm k] ++ drop k.+1 hm.
+    by rewrite -[LHS](cat_take_drop k) (drop_nth v) // bnodes_hm_index_ltn.
+  suff e : nth v p l = nth v hm k.
+    move: peq; rewrite {1}ep {1}ehm e perm_catCA perm_sym perm_catCA perm_cat2l.
+    by rewrite perm_sym.
+  case/bnodes_hm_exists: (binhm) => n in_hm.
+  rewrite -[k](index_bnodes in_hm) // nth_index //.
+  have {in_hm} in_p : (b, n) \in p by rewrite -(perm_mem peq).
+  by rewrite -[l](index_bnodes in_p) ?nth_index // -(perm_uniq peq_bnodes).
+  Qed.
+
 
   Lemma set_nth_map_fst (hm : hash_map) (b : B) (n0 : nat) :
     b \in (bnodes_hm hm) ->
@@ -2907,8 +2925,7 @@ About mark_inv.
   rewrite /mark_kmap_2/mark_hash_kmap_2.
   rewrite {4}(hm_zip hm) !find_index_eq_bnode; last by rewrite size_proj.
   set i := index _ _.
-  rewrite set_nth_map_fst //.
-  by rewrite set_nth_eq //.
+  rewrite set_nth_map_fst // set_nth_eq //.
   Qed.
 
   Lemma mark_ubs_kmap :
