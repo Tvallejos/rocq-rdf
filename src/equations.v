@@ -2984,63 +2984,41 @@ Lemma mark_inv_kmap (g : seq (triple I B L)) (hm : hash_map) b :
 
   Lemma color_refineP_kmap (g : seq (triple I B L)) (hm : hash_map) : M_kmap (color_refine_kmap g hm) <= M_kmap hm.
   Proof. by []. Qed.
-(* 
-  Variable   (choose_part : hash_map -> part).
-  Hypothesis (choose_part_order : forall hm1 hm2 : hash_map,
-                              perm_eq (hashes_hm hm1) (hashes_hm hm2) -> perm_eq (choose_part hm1) (choose_part hm2)).
-  Hypothesis (choose_part_post_relabeling : forall (hm : hash_map) (mu : B -> B), choose_part (map1 mu hm) = map1 mu (choose_part hm)).
-  Hypothesis (in_part_in_hm : forall (bn : B * nat) (hm : hash_map), bn \in choose_part hm -> bn \in hm).
-  Hypothesis (choose_from_not_fine : forall hm : hash_map, ~~ is_fine (gen_partition hm) -> (choose_part hm == [::]) = false).
 
-  Hypothesis mark_perm_hm : forall (b : B) (hm p : hash_map),
-      perm_eq hm p -> perm_eq (mark_kmap_2 b hm) (mark_kmap_2 b p).
+  Lemma choose_part_kmap_order (hm1 hm2 : equations.hash_map B) :
+  perm_eq (hashes_hm hm1) (hashes_hm hm2) ->
+  perm_eq (choose_part_kmap hm1) (choose_part_kmap hm2).
+  Admitted.
 
-  Hypothesis mark_inv :
-    forall (g : seq (triple I B L)) (hm : hash_map),
-      forall (b : B),
-      b \in get_bts g -> good_hash_map_for I L nat_inj g hm -> good_hash_map_for I L nat_inj g (mark_kmap_2 b hm).
+  Lemma choose_part_kmap_post_relabeling (hm : hash_map) (mu : B -> B) : 
+     choose_part_kmap (map1 mu hm) = map1 mu (choose_part_kmap hm).
+  Admitted.
 
-  (* adapt proof of markP_kmap to the new version of choose_part *)
-  Hypothesis markP : forall (bn : B * nat) (hm : hash_map),
-  ~~ is_fine (gen_partition hm) -> uniq (bnodes_hm hm) -> bn \in choose_part hm -> M_kmap (mark_kmap_2 bn.1 hm) < M_kmap hm. *)
+  Lemma in_part_in_hm_kmap (bn : B * nat) (hm : hash_map) : bn \in choose_part_kmap hm -> bn \in hm.
+  Admitted.
 
-  (* Definition todo_list := @template_isocan_
-                                    init_hash_kmap good_init_kmap
-                                    init_hash_inj_rel_kmap
-                                    init_hash_perm_graph_kmap
-                                    init_hash_ubs_kmap
-                                    init_hash_inv_kmap
-                                    choose_part
-                                    choose_part_order
-                                    choose_part_post_relabeling
-                                    in_part_in_hm
-                                    choose_from_not_fine
-                                    color_kmap
-                                    color_refine_kmap
-                                    color_good_hm_kmap
-                                    color_inv_kmap
-                                    color_post_relabeling_kmap
-                                    color_perm_graph_kmap
-                                    color_perm_hm_kmap
-                                    color_ubs_kmap
-                                    color_refine_good_hm_kmap
-                                    color_refine_inv_kmap
-                                    color_refine_post_relabeling_kmap
-                                    color_refine_perm_graph_kmap
-                                    color_refine_perm_hm_kmap
-                                    color_refine_ubs_kmap
-                                    mark_kmap_2
-                                    good_mark_kmap
-                                    mark_inv
-                                    mark_post_rel_kmap
-                                    mark_perm_hm
-                                    mark_ubs_kmap
-                                    M_kmap
-                                    markP
-                                    color_refineP_kmap.
+  Lemma choose_from_not_fine_kmap (hm : hash_map) : 
+   ~~ is_fine (gen_partition hm) -> (choose_part_kmap hm == [::]) = false.
+  Admitted.
 
-  Check todo_list. *)
+  Definition template_kmap := @template disp I B L nat_inj nat_inj_ cmp cmp_anti cmp_total cmp_trans can ucan sort_can can_nil
+     can_extremum init_hash good_init init_hash_inj_rel init_hash_perm_graph
+     init_hash_ubs init_hash_inv choose_part_kmap choose_part_kmap_order
+     choose_part_kmap_post_relabeling in_part_in_hm_kmap choose_from_not_fine_kmap color_kmap
+     color_refine_kmap color_good_hm_kmap color_inv_kmap color_post_relabeling_kmap
+     color_perm_graph_kmap color_perm_hm_kmap color_ubs_kmap color_refine_good_hm_kmap
+     color_refine_inv_kmap color_refine_post_relabeling_kmap color_refine_perm_graph_kmap
+     color_refine_perm_hm_kmap color_refine_ubs_kmap mark_kmap_2 good_mark_kmap mark_inv_kmap
+     mark_post_rel_kmap mark_perm_hm_kmap mark_ubs_kmap M_kmap markP_kmap color_refineP_kmap.
 
+  Lemma uniq_kmap (g : rdf_graph I B L) : uniq (template_kmap g).
+  Proof. by apply: uniq_template; case: g. Qed.
+
+  Definition kmap_rdf (g : rdf_graph I B L) : rdf_graph I B L :=    
+      mkRdfGraph (uniq_kmap g).
+
+  Theorem kmap_isocan : (@effective_isocanonical_mapping I B L kmap_rdf).
+  Proof. exact: template_isocan. Qed.
 
 End KmappingInstance.
 
