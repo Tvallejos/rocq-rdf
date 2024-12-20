@@ -666,3 +666,45 @@ Lemma zip_uniq_proj (T1 T2 : eqType) (s1 : seq T1) (s2 : seq T2) :
   by move=> _ /= /IHtl ->.
   Qed.
 
+
+
+  Lemma eq_map_zip_nseq : forall (T U : Type) (s : seq T) (u : U),
+    map (fun t=> (t,u)) s = zip s (nseq (size s) u).
+  Proof.
+  move=> T U s u.
+  by elim: s=> [//|hd tl IHtl] /=; rewrite IHtl.
+  Qed.
+
+  Lemma perm_eq_zip_eql (T U : eqType) (s1 s2 : seq T) (s3 : seq U):
+    size s1 = size s2 ->
+    size s1 = size s3 ->
+    constant s3 ->
+    perm_eq s1 s2 ->
+    perm_eq (zip s1 s3) (zip s2 s3).
+  Proof.
+  case: s2; case: s3; case: s1=> //.
+  move=> a1 tl1 a3 tl3 a2 tl2 /= [eq_size12] [eq_size13] const_s.
+  move=> /(perm_map (fun t=> (t,a3))); rewrite !eq_map_zip_nseq /=.
+  suffices tl3_nseq : (nseq (size tl1) a3) = tl3.
+    by rewrite -eq_size12 !tl3_nseq.
+  rewrite eq_size13.
+  elim: tl3 const_s {eq_size13}=> [//|hd tl IHtl] /=.
+  by move=> /andP[/eqP -> eq_tl]; rewrite IHtl //.
+  Qed.
+
+
+Lemma size_proj (T1 T2 : Type) (s : seq (T1 * T2)) :
+  size [seq i.2 | i <- s] = size [seq i.1 | i <- s].
+Proof. by elim: s=> [//| h tl IHtl] /=; rewrite IHtl. Qed.
+
+Lemma pair_zip_in (T1 T2 : eqType) (s1 : seq T1) (s2 : seq T2) (x0 x : T2) (y1: T1) (i : nat) :
+  size s1 = size s2 -> (i < size s2)%N -> nth x0 s2 i = x ->
+  exists t1, (t1,x) \in zip s1 s2 /\ nth (t1,x0) (zip s1 s2) i = (t1,x).
+Proof.
+move=> eq_size i_in <-.
+exists (nth y1 s1 i); split.
++ rewrite -nth_zip //; apply mem_nth.
+  by rewrite size_zip eq_size ltn_min i_in.
++ rewrite nth_zip //; congr pair.
+  by apply set_nth_default; rewrite eq_size.
+Qed.
