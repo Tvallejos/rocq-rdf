@@ -2871,27 +2871,66 @@ Lemma mark_inv_kmap (g : seq (triple I B L)) (hm : hash_map) b :
   elim/gen_partition_elim: hm1.
   case: hm1 hperm12 => [| p hm1].
   Search _ partitionate. *)
+
+  (* TODO : Move above *)
+  Lemma perm_eq_hashes  (hm1 hm2 : hash_map) :  perm_eq hm1 hm2 ->
+    perm_eq (hashes_hm hm1) (hashes_hm hm2).
+  Proof. by move=> hm12; rewrite /hashes_hm perm_map. Qed.
+
+  Lemma perm_eq_part_of (hm1 hm2 : hash_map) n :  perm_eq hm1 hm2 ->
+       perm_eq (part_of hm1 n) (part_of hm2 n).
+  Proof. by move=> hm12; rewrite /part_of perm_filter. Qed.
+
   Lemma choose_part_kmap_order (hm1 hm2 : equations.hash_map B) :
-  perm_eq (hashes_hm hm1) (hashes_hm hm2) ->
+  perm_eq hm1 hm2 -> 
   perm_eq (choose_part_kmap hm1) (choose_part_kmap hm2).
   Proof.
-  move=> hperm.
-  rewrite /choose_part_kmap !has_predC -/(is_fine _) -/(is_fine _).
-  rewrite (perm_hash_eq_fine _ _ hperm); case: ifP => hfine //.
-  Admitted.
+  move=> hm12; rewrite /choose_part_kmap /gen_ordered_partition.
+  set l1 := sort _ _; set l2 := sort _ _.
+  have -> : l1 = l2.
+     apply/perm_sort_leP; apply: perm_undup; apply: perm_mem. 
+     exact: perm_eq_hashes.
+  move: l2 {l1} => l.
+  elim: l => [| x l ihl] //=.
+  set s1 := size _; set s2 := size _.
+  have -> : s1 = s2.
+    rewrite {}/s1 {}/s2.
+    apply: perm_size; exact: perm_eq_part_of.
+  case: ifP=> hx //=.
+  exact: perm_eq_part_of.
+  Qed.
 
   Lemma choose_part_kmap_post_relabeling (hm : hash_map) (mu : B -> B) : 
      choose_part_kmap (map1 mu hm) = map1 mu (choose_part_kmap hm).
-  Admitted.
+  Proof.
+  rewrite /map1 -!map_comp !zip_map.
+  pose f (i : B * nat) := ((mu \o fst) i, i.2).
+  rewrite -/f /choose_part_kmap /gen_ordered_partition.
+  set u1 := undup _; set u2 := undup _.
+  have -> : u1 = u2.
+    rewrite {}/u1 {}/u2 /hashes_hm -map_comp.
+    have /eq_map-> : (snd \o f) =1 snd by move=> [x1 x2] //.
+    done.
+  move: (sort leq u2) => l {u1 u2}.
+  pose p := [pred x : part | 1 < size x].
+  rewrite -/p.
+  elim: l => [| n l ihl] //=.
+  have e : part_of [seq f i | i <- hm] n =
+            map f (part_of hm n).
+    by rewrite /part_of filter_map.
+  by rewrite !e size_map; case: ifP.
+  Qed.
 
+(*TODO : is duplicate *)
   Lemma in_part_in_hm_kmap (bn : B * nat) (hm : hash_map) : 
     bn \in choose_part_kmap hm -> bn \in hm.
-  Admitted.
+  Proof. exact: in_part_in_bnodes_kmap. Qed.
 
+(*TODO : is duplicate *)
   Lemma choose_from_not_fine_kmap (hm : hash_map) : 
    ~~ is_fine (gen_partition hm) -> 
      (choose_part_kmap hm == [::]) = false.
-  Admitted.
+  Proof. exact: choose_part_not_nil_kmap. Qed.
 
   Definition template_kmap := @template disp I B L nat_inj nat_inj_ cmp cmp_anti cmp_total cmp_trans can ucan sort_can can_nil
      can_extremum init_hash good_init init_hash_inj_rel init_hash_perm_graph
