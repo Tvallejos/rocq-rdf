@@ -313,8 +313,14 @@ Lemma num_triv_distinguished (hm : hash_map):
     distinguished hm = num_uniq_hash hm.
 Proof.
 rewrite /distinguished /gen_partition /num_uniq_hash /is_trivial.
-rewrite count_map. (* count =1 size_filter *)
-Admitted.
+rewrite count_map /preim /mult1 /= /part_of.
+have /permP aux := (perm_count_undup (hashes_hm hm)).
+rewrite -[in RHS]aux {aux} count_flatten -map_comp /=.
+rewrite -[LHS]sumn_count; congr sumn.
+apply: eq_map=> k /=; rewrite size_filter count_nseq -count_mult.
+set n := count _ _.
+by case: (n =P 1) => // ->; rewrite muln1.
+Qed.
 
 Lemma size_perm_gen_partition (hm p : hash_map):
       perm_eq (hashes_hm hm) (hashes_hm p) ->
@@ -2455,10 +2461,6 @@ case e: s => [ | hd tl] //=.
    by rewrite (perm_mem (gen_ordered_partition_perm_eq hm)).
 Qed.
 
-Lemma not_fine_size_choose_part (hm : hash_map) : 
-  ~~ is_fine (gen_partition hm) -> 1 < size (choose_part_kmap hm).
-Proof.
-Admitted.
 
 (* Assia : weird phrasing : why not (_ != _) ?*)
 Lemma choose_part_not_nil_kmap (hm : hash_map) : 
@@ -2466,6 +2468,25 @@ Lemma choose_part_not_nil_kmap (hm : hash_map) :
 Proof.
 move/not_fine_chosen_part_in_P/part_size.
 by rewrite -size_eq0 lt0n => /negPf.
+Qed.
+
+Lemma not_fine_size_choose_part (hm : hash_map) : 
+  ~~ is_fine (gen_partition hm) -> 1 < size (choose_part_kmap hm).
+Proof.
+move=> h.
+(* TODO this is almost verbatim the proof of 
+   not_fine_chosen_part_in_P. could prove the conj in one go*)
+rewrite /choose_part_kmap; set s := (X in head _ X).
+case e: s => [ | hd tl] //=.
+- suff: s != [::] by rewrite e.
+  rewrite /s -has_filter. 
+  rewrite (perm_has _ (gen_ordered_partition_perm_eq hm)).
+  move: h; rewrite /is_fine -has_predC.
+  case/hasP=> /= x hx1 hx2; apply/hasP; exists x => //=.
+  move/part_size: hx1; rewrite leq_eqVlt eq_sym.
+  by move: hx2; rewrite /is_trivial; move/negPf->.
+-  have : hd \in s by rewrite e mem_head.
+   by rewrite /s mem_filter; case/andP.
 Qed.
 
 
