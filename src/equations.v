@@ -92,9 +92,17 @@ Section HashMapsAndPartitions.
     by rewrite mem_filter /eq_hash /pred1 /= eq_sym; case/andP.
   Qed.
 
-  Lemma part_all_eq_hash_mem (hd : B * nat) (tl : seq (B * nat)) (hm : hash_map) :
-  hd \in tl -> (tl \in gen_partition hm) -> all (eq_hash hd.2) (tl).
-  Admitted.
+Lemma part_all_eq_hash_mem (bn : B * nat) (l : seq (B * nat)) (hm : hash_map) :
+  bn \in l -> (l \in gen_partition hm) -> all (eq_hash bn.2) l.
+Proof.
+case: l => [| x l] // hbn hxl.
+suff -> : bn.2 = x.2 by apply: part_all_eq_hash hxl.
+move: hxl; case/mapP=> n; rewrite mem_undup => hn e.
+have : x \in part_of hm n by rewrite -e mem_head.
+have : bn \in part_of hm n by rewrite -e.
+by rewrite !mem_filter=> /andP [] /eqP<-  _ /andP [] /eqP<-.
+Qed.
+
 (* 
 
 Lemma gen_partition_filter (hd a : B * nat) (tl : seq (B * nat)) (hm' : hash_map) :
