@@ -91,6 +91,10 @@ Section HashMapsAndPartitions.
     have : hd \in part_of hm n by rewrite -hfilter mem_head.
     by rewrite mem_filter /eq_hash /pred1 /= eq_sym; case/andP.
   Qed.
+
+  Lemma part_all_eq_hash_mem (hd : B * nat) (tl : seq (B * nat)) (hm : hash_map) :
+  hd \in tl -> (tl \in gen_partition hm) -> all (eq_hash hd.2) (tl).
+  Admitted.
 (* 
 
 Lemma gen_partition_filter (hd a : B * nat) (tl : seq (B * nat)) (hm' : hash_map) :
@@ -2443,6 +2447,11 @@ case e: s => [ | hd tl] //=.
    by rewrite (perm_mem (gen_ordered_partition_perm_eq hm)).
 Qed.
 
+Lemma not_fine_size_choose_part (hm : hash_map) : 
+  ~~ is_fine (gen_partition hm) -> 1 < size (choose_part_kmap hm).
+Proof.
+Admitted.
+
 (* Assia : weird phrasing : why not (_ != _) ?*)
 Lemma choose_part_not_nil_kmap (hm : hash_map) : 
   ~~ is_fine (gen_partition hm) -> (choose_part_kmap hm == [::]) = false.
@@ -2617,18 +2626,9 @@ Admitted.
                  by apply not_fine_chosen_part_in_P.
                  rewrite /p (mem_partP _ _ _ in_part in_P) /=.
                  by rewrite size_filter count_filter.
-      suffices H''' : forall (T : eqType) (p : seq T), p != [::] -> (size p == 1) = false -> 1 < size p.
-        apply H'''.
-        - by rewrite /negb; rewrite choose_part_not_nil_kmap //.
-        (* - have H'': has (predC (is_trivial (B:=B))) (gen_partition hm).
-            by rewrite has_predC; exact: finePn.
-          rewrite /p/choose_part_kmap. H''.
-          move : H''.
-          set p' := nth _ _ _.
-          by move=> /(nth_find [::]); rewrite /=/is_trivial/negb; case: ifP=> //. *) admit.
-        - by move=> T [//| hd' [//|tl']] //.
+              - exact: not_fine_size_choose_part.
         - rewrite /p.
-          (* by apply (part_all_eq_hash_mem _ _ _ in_part in_P).*) admit.
+          by apply (part_all_eq_hash_mem _ _ _ in_part in_P).
         - rewrite /n2/mult1.
           rewrite count_set_nth_ltn //= eqxx /=.
          (* EO subpred *)
@@ -2652,7 +2652,7 @@ Admitted.
           rewrite proj1_set_nth_prod //.
         - by move: has_bn; rewrite size_map.
         - by apply num_triv_distinguished.
-      Admitted.
+      Qed.
 
   Lemma markP_kmap (bn : B * nat) (hm : hash_map) :
     ~~ is_fine (gen_partition hm) ->
