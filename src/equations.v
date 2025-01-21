@@ -2537,11 +2537,20 @@ rewrite /choose_part_kmap.
 set s := (X in head _ X).
 case e : s => [ | hd tl] //= hbn.
 have : hd \in s by rewrite e mem_head.
-rewrite /s mem_filter; case/andP=> hhd1 hhd2.
-rewrite /mult1.
-Admitted.
+rewrite /s mem_filter; case/andP=> /= hhd1 hhd2.
+rewrite /mult1. rewrite count_map /preim /=.
+suff: (2 <= count [pred x | x.2 == bn.2] hm)%N. (* by lia *)
+  by move/ltn_eqF; rewrite eq_sym; move/negPf->.
+have hhd3 : hd \in gen_partition hm.
+  by rewrite -(perm_mem (gen_ordered_partition_perm_eq _)).
+have aux : all [pred x | x.2 == bn.2] hd.
+  by apply: (part_all_eq_hash_mem _ _ hm).
+have /(leq_count_subseq [pred x | x.2 == bn.2]): subseq hd hm.
+  by apply: partition_memP.
+by apply: leq_trans; move: aux; rewrite all_count=> /eqP->.
+Qed.
 
-  Lemma distinguished_mark (bn: B * nat) (hm : hash_map):
+Lemma distinguished_mark (bn: B * nat) (hm : hash_map):
     uniq (bnodes_hm hm) ->
     ~~ is_fine (gen_partition hm) ->
        bn \in choose_part_kmap hm ->

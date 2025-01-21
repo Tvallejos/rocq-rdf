@@ -708,3 +708,9 @@ exists (nth y1 s1 i); split.
 + rewrite nth_zip //; congr pair.
   by apply set_nth_default; rewrite eq_size.
 Qed.
+
+Lemma head_seq_seq_in (T : eqType) (s : seq (seq T)) d x : 
+   x \in (head d s) -> (x \in d) \/ exists t, (t \in s) /\ (x \in t).
+Proof.
+by case: s d => [| y s] d //= ?; [by left | right]; exists y; rewrite ?mem_head.
+Qed.
