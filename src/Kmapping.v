@@ -244,7 +244,7 @@ Section Kmapping.
     + rewrite /s_can/= !map_nil_is_nil => /eqP.
       by apply contra_eq; rewrite permutations_neq_nil.
     + move=> /mapP[/=xs /mapP[/= a ain]] -> => /eqP.
-      by rewrite eq_sym=> /eqP/(sort_nil le_triple_total le_triple_trans le_triple_anti).
+      by rewrite eq_sym (sort_nil le_triple_total le_triple_trans le_triple_anti).
     Qed.
 
     (* For any pair of duplicate-free sequence of triples: ts1 and ts2,

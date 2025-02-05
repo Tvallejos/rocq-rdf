@@ -527,10 +527,11 @@ Lemma zip_uniq_proj (T1 T2 : eqType) (s1 : seq T1) (s2 : seq T2) :
   Lemma sort_nil (T : eqType) (leT : rel T) :
     total leT -> transitive leT -> antisymmetric leT ->
     forall (s1 : seq T),
-    sort leT s1 = [::] -> s1 = [::].
+    (sort leT s1 == [::]) = (s1 == [::]).
   Proof.
     move=> tot trans anti s1; suffices nil_sorted: [::] = sort leT [::].
-      by rewrite nil_sorted=> /(perm_sortP tot trans anti)/perm_nilP ->.
+      apply /idP/idP;last by move=> /eqP->.
+      by rewrite nil_sorted=> /eqP/(perm_sortP tot trans anti)/perm_nilP ->.
     by [].
   Qed.
 

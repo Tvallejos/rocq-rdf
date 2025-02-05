@@ -528,19 +528,17 @@ Section Template.
   Qed.
 
   (* A default graph *)
-  Variable can : seq (triple I B L).
-  Hypothesis ucan : uniq can.
-  Hypothesis sort_can : sort le_triple can = can.
-  Hypothesis can_nil : can = nil.
-  (* Determines a choice of default graph can *)
-  Hypothesis can_extremum : forall (x : seq (triple I B L)), cmp can x.
+  Definition g0 : seq (triple I B L) := [::].
 
-  Lemma can_lid : left_id can choose_graph.
+  (* Determines a choice of default graph can *)
+  Hypothesis can_extremum : forall (x : seq (triple I B L)), cmp g0 x.
+
+  Lemma can_lid : left_id g0 choose_graph.
   Proof. by move=> x; rewrite /choose_graph can_extremum. Qed.
 
   HB.instance Definition _ :=
     Monoid.isComLaw.Build
-      (seq (triple I B L)) can
+      (seq (triple I B L)) g0
       (choose_graph) choose_graphA
       choose_graphC
       can_lid.
@@ -1046,7 +1044,7 @@ Lemma fun_of_hash_perm (hm p : hash_map) :
 
 
 Definition distinguish (g : seq (triple I B L)) (hm : hash_map) : seq (triple I B L) :=
-      distinguish__ g hm can.
+      distinguish__ g hm g0.
 
 Definition distinguish_ (g : seq (triple I B L)) (hm : hash_map) : seq (triple I B L) :=
       let p := choose_part hm in
@@ -1059,7 +1057,7 @@ Definition distinguish_ (g : seq (triple I B L)) (hm : hash_map) : seq (triple I
       let f := fun gbot bn  =>
                  let candidate := d bn in
                  if cmp gbot candidate then candidate else gbot in
-      foldl f can p.
+      foldl f g0 p.
 
     Lemma eq_distinguish (g : seq (triple I B L)) (hm : hash_map) :
     ~~ (is_fine (gen_partition hm)) -> (uniq (bnodes_hm hm)) -> distinguish g hm = distinguish_ g hm.
@@ -1082,7 +1080,7 @@ Definition distinguish_ (g : seq (triple I B L)) (hm : hash_map) : seq (triple I
 
     Definition distinguish_fold (g : seq (triple I B L)) (hm : hash_map) : seq (triple I B L) :=
       let p := choose_part hm in
-      foldl choose_graph can (map (canonicalize g hm) p).
+      foldl choose_graph g0 (map (canonicalize g hm) p).
 
     Lemma fold_map (T1 T2 R : Type) (f : R -> T2 -> R) (g : T1 -> T2) (z : R) (s : seq T1) :
       foldl (fun r1 t1=> f r1 (g t1)) z s = foldl f z (map g s).
@@ -1117,7 +1115,7 @@ Definition distinguish_ (g : seq (triple I B L)) (hm : hash_map) : seq (triple I
 
     Lemma distinguish_choice (g : seq (triple I B L)) (hm: hash_map) :
     ~~ (is_fine (gen_partition hm)) -> (uniq (bnodes_hm hm)) -> 
-    distinguish g hm = can \/ distinguish g hm \in (map (canonicalize g hm) (choose_part hm)).
+    distinguish g hm = g0 \/ distinguish g hm \in (map (canonicalize g hm) (choose_part hm)).
     Proof. 
     move=> e1 e2. 
     by rewrite distinguish_fold_map //; apply distinguish_choice_default. 
@@ -1132,7 +1130,7 @@ Definition distinguish_ (g : seq (triple I B L)) (hm : hash_map) : seq (triple I
     move: hm e1 e2 (M hm).+1.
     move=> hm e1 e2 n. move: n hm e1 e2 => n.
     elim: n => [//| n IHn hm e1 e2].
-    case: (distinguish_choice g hm e1 e2); first by move=> ->; rewrite ucan.
+    case: (distinguish_choice g hm e1 e2); first by move=> ->.
     move=> /mapP/= [bn pin ->].
     move=> MH eqbns finePn.
     rewrite /canonicalize.
@@ -1295,7 +1293,7 @@ Definition distinguish_ (g : seq (triple I B L)) (hm : hash_map) : seq (triple I
       bnodes_hm hm =i get_bts g ->
       (uniq (bnodes_hm hm)) ->
       ~~ is_fine (gen_partition hm) ->
-      distinguish g hm = can -> g = can.
+      distinguish g hm = g0 -> g = g0.
     Proof.
     have : M hm < S (M hm) by apply ltnSn.
     move: hm (M hm).+1.
@@ -1306,8 +1304,8 @@ Definition distinguish_ (g : seq (triple I B L)) (hm : hash_map) : seq (triple I
     + by rewrite map_nil_is_nil choose_from_not_fine.
     rewrite /canonicalize; move=> /mapP[/= b bin].
     case: ifP=> [_|].
-    + rewrite -{1}sort_can=> /rdf_leP.
-      rewrite can_nil perm_sym.
+    + have ->: g0 = sort le_triple g0 by [].
+      move=> /rdf_leP; rewrite perm_sym.
       by move=> /perm_nilP/eqP; rewrite map_nil_is_nil=> /eqP->.
     + move=> H /eqP; rewrite eq_sym=> /eqP.
       apply IHn=> //; last by rewrite H.
@@ -1333,9 +1331,7 @@ Definition distinguish_ (g : seq (triple I B L)) (hm : hash_map) : seq (triple I
     elim: n => [//| n IHn hm' ghm hmM] uniqP finePn.
     move: (distinguish_choice g hm')=> //= [] //.
     + move=> H; rewrite H; move/(nil_is_nil g _ ghm uniqP finePn) : H ->.
-      exists id; split; first by rewrite relabeling_seq_triple_id sort_can.
-      rewrite /is_pre_iso_ts /= /bnode_map_bij.
-      by rewrite (uniq_get_bts _) /= map_id perm_refl.
+      by exists id; split; first by rewrite relabeling_seq_triple_id.
     + move=> /mapP/=[bn inp ->].
       case_eq  (is_fine (gen_partition (color_refine g (mark bn.1 hm'))))=> H.
       - exists (fun_of_hash_map (color_refine g (mark bn.1 hm'))).
@@ -2214,7 +2210,6 @@ Notation le_triple := (@le_triple disp I B L).
 
 Variable b_default : B.  
 
-
 (* Enumeration of b-nodes *)
 Hypothesis nat_inj : nat -> B.
 Hypothesis nat_inj_ : injective nat_inj.
@@ -2228,21 +2223,19 @@ Hypothesis cmp_total : total cmp.
 Hypothesis cmp_trans : transitive cmp.
 
 (* A default graph *)
-Variable can : seq (triple I B L).
-Hypothesis ucan : uniq can.
-Hypothesis sort_can : sort le_triple can = can.
-Hypothesis can_nil : can = nil.
+Let g0 := (@g0 disp I B L).
+
 (* Determines a choice of default graph can *)
-Hypothesis can_extremum : forall (x : seq (triple I B L)), cmp can x.
+Hypothesis can_extremum : forall (x : seq (triple I B L)), cmp g0 x.
 
 Let choose_graph := (@choose_graph disp I B L cmp).
 Let choose_graphA := (@choose_graphA disp I B L cmp cmp_anti cmp_total cmp_trans).
 Let choose_graphC := (@choose_graphC disp I B L cmp cmp_anti cmp_total).
-Let can_lid := (@can_lid disp I B L cmp can can_extremum).
+Let can_lid := (@can_lid disp I B L cmp can_extremum).
 
 HB.instance Definition _ :=
   Monoid.isComLaw.Build
-    (seq (triple I B L)) can
+    (seq (triple I B L)) g0
     choose_graph choose_graphA
     choose_graphC
     can_lid.
@@ -2965,29 +2958,40 @@ Lemma mark_inv_kmap (g : seq (triple I B L)) (hm : hash_map) b :
   Proof. exact: in_part_in_bnodes_kmap. Qed.
 
 (*TODO : is duplicate *)
-  Lemma choose_from_not_fine_kmap (hm : hash_map) : 
-   ~~ is_fine (gen_partition hm) -> 
+  Lemma choose_from_not_fine_kmap (hm : hash_map) :
+   ~~ is_fine (gen_partition hm) ->
      (choose_part_kmap hm == [::]) = false.
   Proof. exact: choose_part_not_nil_kmap. Qed.
 
-  Definition template_kmap := @template disp I B L nat_inj nat_inj_ cmp cmp_anti cmp_total cmp_trans can ucan sort_can can_nil
-     can_extremum init_hash good_init init_hash_inj_rel init_hash_perm_graph
-     init_hash_ubs init_hash_inv choose_part_kmap choose_part_kmap_order
-     choose_part_kmap_post_relabeling in_part_in_hm_kmap choose_from_not_fine_kmap color_kmap
-     color_refine_kmap color_good_hm_kmap color_inv_kmap color_post_relabeling_kmap
-     color_perm_graph_kmap color_perm_hm_kmap color_ubs_kmap color_refine_good_hm_kmap
-     color_refine_inv_kmap color_refine_post_relabeling_kmap color_refine_perm_graph_kmap
-     color_refine_perm_hm_kmap color_refine_ubs_kmap mark_kmap_2 good_mark_kmap mark_inv_kmap
-     mark_post_rel_kmap mark_perm_hm_kmap mark_ubs_kmap M_kmap markP_kmap color_refineP_kmap.
+  Definition template_kmap := @template disp I B L nat_inj cmp
+                                init_hash choose_part_kmap color_kmap color_refine_kmap
+                                mark_kmap_2 M_kmap markP_kmap color_refineP_kmap.
 
   Lemma uniq_kmap (g : rdf_graph I B L) : uniq (template_kmap g).
-  Proof. by apply: uniq_template; case: g. Qed.
+  Proof.
+  apply (@uniq_template disp I B L nat_inj nat_inj_ cmp init_hash good_init init_hash_ubs
+           choose_part_kmap in_part_in_hm_kmap color_kmap color_refine_kmap
+           color_good_hm_kmap color_ubs_kmap color_refine_good_hm_kmap
+           color_refine_ubs_kmap mark_kmap_2 good_mark_kmap mark_ubs_kmap M_kmap markP_kmap
+           color_refineP_kmap).
+  by case: g.
+  Qed.
 
-  Definition kmap_rdf (g : rdf_graph I B L) : rdf_graph I B L :=    
-      mkRdfGraph (uniq_kmap g).
+  Definition kmap_rdf (g : rdf_graph I B L) : rdf_graph I B L :=
+    mkRdfGraph (uniq_kmap g).
 
   Theorem kmap_isocan : (@effective_isocanonical_mapping I B L kmap_rdf).
-  Proof. exact: template_isocan. Qed.
+  Proof.
+  exact: (@template_isocan disp I B L nat_inj nat_inj_ cmp cmp_anti cmp_total cmp_trans
+            can_extremum init_hash good_init init_hash_inj_rel init_hash_perm_graph
+            init_hash_ubs init_hash_inv choose_part_kmap choose_part_kmap_order
+            choose_part_kmap_post_relabeling in_part_in_hm_kmap choose_from_not_fine_kmap color_kmap
+            color_refine_kmap color_good_hm_kmap color_inv_kmap color_post_relabeling_kmap
+            color_perm_graph_kmap color_perm_hm_kmap color_ubs_kmap color_refine_good_hm_kmap
+            color_refine_inv_kmap color_refine_post_relabeling_kmap color_refine_perm_graph_kmap
+            color_refine_perm_hm_kmap color_refine_ubs_kmap mark_kmap_2 good_mark_kmap mark_inv_kmap
+            mark_post_rel_kmap mark_perm_hm_kmap mark_ubs_kmap M_kmap markP_kmap color_refineP_kmap).
+  Qed.
 
 End KmappingInstance.
 
