@@ -207,6 +207,11 @@ Section EqTerm.
   Definition get_b_term (t : (term I B L)) : option B :=
     if t is Bnode b then Some b else None.
 
+  Lemma count_get_b_is_bnode (terms : seq (term I B L)) :
+    count (fun x : term I B L => get_b_term x) terms
+    = count (fun x : term I B L => is_bnode x) terms.
+  Proof. by elim: terms=> [//|[]hd tl IHtl]=> //=; rewrite IHtl. Qed.
+
   Definition get_bs (ts : seq (term I B L)) :=
     pmap get_b_term ts.
 

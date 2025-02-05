@@ -2079,126 +2079,6 @@ Definition distinguish_ (g : seq (triple I B L)) (hm : hash_map) : seq (triple I
     nil isT erefl erefl (@nil_minimum disp I B L). *)
 
 
-  Definition init_hash_kmap (ts : seq (triple I B L)) : hash_map :=
-    let bs := get_bts ts in
-    zip bs (nseq (size bs) 0).
-
-  Lemma good_init_kmap (g : seq (triple I B L)) : bnodes_hm (init_hash_kmap g) =i get_bts g.
-  Proof. by move=> x; rewrite /init_hash_kmap/bnodes_hm zip_proj1 // size_nseq. Qed.
-
-  Lemma count_get_b_is_bnode (terms : seq (term I B L)) :
-    count (fun x : term I B L => get_b_term x) terms
-    = count (fun x : term I B L => is_bnode x) terms.
-  Proof. by elim: terms=> [//|[]hd tl IHtl]=> //=; rewrite IHtl. Qed.
-
-  Lemma mem_bs_nodes (b : B) (ts : seq (triple I B L)):
-    Bnode b \in node_terms ts -> Bnode b \in bnodes_ts ts.
-  Proof.
-  have /perm_mem -> := bnodes_nodes ts.
-  by rewrite mem_filter=> ->.
-  Qed.
-
-  Lemma size_rel_inj (ts : seq (triple I B L)) (mu : B -> B):
-    {in (get_bts ts)&, injective mu} -> size (get_bts ts) = size (get_bts (relabeling_seq_triple mu ts)).
-  Proof.
-  move=> mu_inj.
-  rewrite /get_bts/get_bs.
-  rewrite !size_pmap.
-  have /permP -> := bnodes_nodes ts.
-  have /permP -> := bnodes_nodes (relabeling_seq_triple mu ts).
-  rewrite !count_get_b_is_bnode.
-  have : perm_eq (node_terms (relabeling_seq_triple mu ts)) (map (relabeling_term mu) (node_terms ts)).
-    rewrite perm_sym.
-    apply perm_undup_map_inj.
-    move=> []trm1 []trm2 => //=.
-    have mem_bs_nodes : forall (b : B) (ts : seq (triple I B L)), Bnode b \in node_terms ts -> Bnode b \in bnodes_ts ts.
-      by apply mem_bs_nodes.
-    move=> /mem_bs_nodes; rewrite bnodes_map_get_bts.
-    rewrite mem_map; last by apply bnode_inj.
-    move=> trm1_in /mem_bs_nodes; rewrite bnodes_map_get_bts mem_map; last by apply bnode_inj.
-    by move=> trm2_in [] /(mu_inj _ _ trm1_in trm2_in) ->.
-    by apply uniq_node_terms.
-      set T := node_terms (relabeling_seq_triple mu ts).
-      have /undup_id <- : uniq T by apply uniq_node_terms.
-      apply perm_undup.
-      rewrite /T.
-      move=> trm.
-      rewrite -mem_map_undup.
-      rewrite mem_undup.
-      move=> {mu_inj T}.
-      elim: ts=> [//|hd tl IHtl].
-      rewrite /=.
-      by rewrite projs_rel projo_rel !in_cons IHtl.
-  move=> /permP idea.
-  rewrite -!count_filter.
-  rewrite idea.
-  elim: (node_terms ts)=> [//| hd tl IHtl].
-  rewrite /= IHtl; congr addn.
-  by case: hd.
-  Qed.
-
-
-Lemma init_hash_inj_rel_kmap :
-forall (g : seq (triple I B L)) (mu : B -> B),
-  {in get_bts g &, injective mu} ->
-  perm_eq (map1 mu (init_hash_kmap g)) (init_hash_kmap (relabeling_seq_triple mu g)).
-Proof.
-move=> g mu mu_inj.
-rewrite /init_hash_kmap.
-have eq_size : size (get_bts g) = size (nseq (size (get_bts g)) 0) by rewrite size_nseq.
-rewrite map1_zip //.
-have eq_num_bs: size (get_bts g) = size (get_bts (relabeling_seq_triple mu g)).
-by apply size_rel_inj.
-rewrite -eq_num_bs; apply perm_eq_zip_eql.
-by rewrite -eq_num_bs size_map.
-by rewrite size_map -eq_size.
-apply constant_nseq.
-apply perm_eq_bts_relabel_inj_in=> //.
-Qed.
-
-
-Lemma init_hash_perm_graph_kmap : forall g h : seq (triple I B L), perm_eq g h -> perm_eq (init_hash_kmap g) (init_hash_kmap h).
-Proof.
-move=> g h peq.
-rewrite /init_hash_kmap.
-have /peq_get_bts/perm_size eq_size := peq.
-rewrite eq_size.
-apply perm_eq_zip_eql=> //.
-by rewrite size_nseq eq_size.
-apply constant_nseq.
-by apply peq_get_bts.
-Qed.
-
-Lemma init_hash_ubs_kmap : forall g : seq (triple I B L), uniq (bnodes_hm (init_hash_kmap g)).
-Proof.
-move=> g; rewrite /init_hash_kmap/bnodes_hm.
-by rewrite map_fst_zip_size ?uniq_get_bts // size_nseq.
-Qed.
-
-(* Assia: duplicated of has_eq_bondes *)
-(* Lemma has_eq_bnodes_in (hm : hash_map) (b : B) :
-    has (eq_bnode b) hm = (b \in (bnodes_hm hm)).
-Proof. by rewrite has_eq_bnodes. Qed. *)
-
-Lemma init_hash_inv_kmap (g : seq (triple I B L)) : good_hash_map_for g (init_hash_kmap g).
-Proof.
-rewrite /good_hash_map_for.
-set s := get_bts g.
-move=> mu mu_inj b bin.
-rewrite /init_hash_kmap -/s.
-set t := zip _ _. rewrite /=. 
-suff aux (hm : hash_map) (f : B -> B) (x : B) : 
-  x \in bnodes_hm hm -> {in bnodes_hm hm &, injective f} -> (map1 f hm) (f x) = hm x.
-   by rewrite aux // /t /bnodes_hm zip_proj1 // size_nseq.
-move=> hxin injf. 
-rewrite /fun_of_hash_map.
-rewrite bnodes_hm_index_size; last by rewrite map1_bnodesC map_f.
-rewrite bnodes_hm_index_size //; congr nat_inj.
-rewrite map1_bnodesC index_map_in //.
-set i := index _ _.
-by rewrite map1_map (nth_map (x,0)) //= bnodes_hm_index_ltn.
-Qed.
-
 End Template.
 
 Section KmappingInstance.  
@@ -2250,31 +2130,77 @@ Arguments eq_bnode {B} _ _.
 
 Let fun_of_hash_map := (@fun_of_hash_map disp B nat_inj).
 Let good_hash_map_for := (@good_hash_map_for disp I B L nat_inj).
-Let init_hash_kmap := (@init_hash_kmap disp I B L).
+(* Let init_hash_kmap := (@init_hash_kmap disp I B L). *)
 
 Coercion fun_of_hash_map : hash_map >-> Funclass.
 
 (* Initial hash map from a graph *)
-Variable (init_hash : seq (triple I B L) -> hash_map).
+Definition init_hash_kmap (ts : seq (triple I B L)) : hash_map :=
+  let bs := get_bts ts in
+  zip bs (nseq (size bs) 0).
 
 (* init_hash g has the same bnodes as the graph g *)
-(* TODO: use hash_map_for *)
-Hypothesis good_init :
-  forall (g : seq (triple I B L)), bnodes_hm (init_hash g) =i get_bts g.
+Lemma good_init_kmap (g : seq (triple I B L)) : bnodes_hm (init_hash_kmap g) =i get_bts g.
+Proof. by move=> x; rewrite /init_hash_kmap/bnodes_hm zip_proj1 // size_nseq. Qed.
 
 (* the relabeling under injective functions "commutes" with init_hash modulo permutation *)
-Hypothesis init_hash_inj_rel : forall (g : seq (triple I B L)) (mu: B -> B),
-    {in (get_bts g)&, injective mu} -> perm_eq (map1 mu (init_hash g)) (init_hash (relabeling_seq_triple mu g)).
+Lemma init_hash_inj_rel_kmap :
+forall (g : seq (triple I B L)) (mu : B -> B),
+  {in get_bts g &, injective mu} ->
+  perm_eq (map1 mu (init_hash_kmap g)) (init_hash_kmap (relabeling_seq_triple mu g)).
+Proof.
+move=> g mu mu_inj.
+rewrite /init_hash_kmap.
+have eq_size : size (get_bts g) = size (nseq (size (get_bts g)) 0) by rewrite size_nseq.
+rewrite map1_zip //.
+have eq_num_bs: size (get_bts g) = size (get_bts (relabeling_seq_triple mu g)).
+by apply size_rel_inj.
+rewrite -eq_num_bs; apply perm_eq_zip_eql.
+by rewrite -eq_num_bs size_map.
+by rewrite size_map -eq_size.
+apply constant_nseq.
+apply perm_eq_bts_relabel_inj_in=> //.
+Qed.
 
 (* permutation equal graphs yield permutation equal hashmaps under init_hash *)
-Hypothesis init_hash_perm_graph : forall (g h : seq (triple I B L)), perm_eq g h -> perm_eq (init_hash g) (init_hash h).
+Lemma init_hash_perm_graph_kmap : forall g h : seq (triple I B L), perm_eq g h -> perm_eq (init_hash_kmap g) (init_hash_kmap h).
+Proof.
+move=> g h peq.
+rewrite /init_hash_kmap.
+have /peq_get_bts/perm_size eq_size := peq.
+rewrite eq_size.
+apply perm_eq_zip_eql=> //.
+by rewrite size_nseq eq_size.
+apply constant_nseq.
+by apply peq_get_bts.
+Qed.
 
 (* the result of init_hash has uniq blank nodes *)
-Hypothesis init_hash_ubs : forall (g : seq (triple I B L)), uniq (bnodes_hm (init_hash g)).
+Lemma init_hash_ubs_kmap : forall g : seq (triple I B L), uniq (bnodes_hm (init_hash_kmap g)).
+Proof.
+move=> g; rewrite /init_hash_kmap/bnodes_hm.
+by rewrite map_fst_zip_size ?uniq_get_bts // size_nseq.
+Qed.
 
 (* init hash yields a good hash for its input *)
-Hypothesis init_hash_inv : forall (g : seq (triple I B L)),
-  good_hash_map_for g (init_hash g).
+Lemma init_hash_inv_kmap (g : seq (triple I B L)) : good_hash_map_for g (init_hash_kmap g).
+Proof.
+(* rewrite /good_hash_map_for. *)
+set s := get_bts g.
+move=> mu mu_inj b bin.
+rewrite /init_hash_kmap -/s.
+set t : hash_map := zip _ _. rewrite /=.
+suff aux (hm : hash_map) (f : B -> B) (x : B) :
+  x \in bnodes_hm hm -> {in bnodes_hm hm &, injective f} -> (fun_of_hash_map (map1 f hm)) (f x) = (fun_of_hash_map hm) x.
+  by apply aux=> //; rewrite /t /bnodes_hm zip_proj1 // size_nseq.
+move=> hxin injf.
+rewrite /fun_of_hash_map/equations.fun_of_hash_map.
+rewrite bnodes_hm_index_size; last by rewrite map1_bnodesC map_f.
+rewrite bnodes_hm_index_size //. congr nat_inj.
+rewrite map1_bnodesC index_map_in //.
+set i := index _ _.
+by rewrite map1_map (nth_map (x,0)) //= bnodes_hm_index_ltn.
+Qed.
 
 (* Assia: This could even be the definition of gen_partition. *)
 Definition gen_ordered_partition (hm : hash_map) : partition :=
@@ -2325,105 +2251,105 @@ Qed.
 
 Lemma color_good_hm_kmap (g : seq (triple I B L)) (hm : hash_map):
     bnodes_hm hm =i get_bts g -> bnodes_hm (color_kmap g hm) =i get_bts g.
-  Proof. by []. Qed.
+Proof. by []. Qed.
 
-  Lemma color_inv_kmap : forall (g : seq (triple I B L)) (hm : hash_map),
-              good_hash_map_for g hm -> good_hash_map_for g (color_kmap g hm).
-  Proof. move=> g hm H1 mu ghf b bin; by apply H1. Qed.
+Lemma color_inv_kmap : forall (g : seq (triple I B L)) (hm : hash_map),
+            good_hash_map_for g hm -> good_hash_map_for g (color_kmap g hm).
+Proof. move=> g hm H1 mu ghf b bin; by apply H1. Qed.
 
-  Lemma color_post_relabeling_kmap : forall (g : seq (triple I B L)) (mu : B -> B) (hm : hash_map),
-                          {in get_bts g &, injective mu} ->
-                          {in bnodes_hm hm &, injective mu} ->
-                          perm_eq (color_kmap (relabeling_seq_triple mu g) (map1 mu hm)) (map1 mu (color_kmap g hm)).
-  Proof. move=> g mu hm mu_inj_bs mu_inj_hm; by apply perm_refl. Qed.
+Lemma color_post_relabeling_kmap : forall (g : seq (triple I B L)) (mu : B -> B) (hm : hash_map),
+                        {in get_bts g &, injective mu} ->
+                        {in bnodes_hm hm &, injective mu} ->
+                        perm_eq (color_kmap (relabeling_seq_triple mu g) (map1 mu hm)) (map1 mu (color_kmap g hm)).
+Proof. move=> g mu hm mu_inj_bs mu_inj_hm; by apply perm_refl. Qed.
 
-  Lemma color_perm_graph_kmap :
-    forall (g h : seq (triple I B L)) (hm : hash_map), perm_eq g h -> perm_eq (color_kmap g hm) (color_kmap h hm).
-  Proof. by move=> g h hm peq; apply perm_refl. Qed.
+Lemma color_perm_graph_kmap :
+  forall (g h : seq (triple I B L)) (hm : hash_map), perm_eq g h -> perm_eq (color_kmap g hm) (color_kmap h hm).
+Proof. by move=> g h hm peq; apply perm_refl. Qed.
 
-  Lemma color_refine_perm_graph_kmap :
-    forall (g h : seq (triple I B L)) (hm : hash_map), perm_eq g h -> perm_eq (color_refine_kmap g hm) (color_refine_kmap h hm).
-  Proof. by apply color_perm_graph_kmap. Qed.
+Lemma color_refine_perm_graph_kmap :
+  forall (g h : seq (triple I B L)) (hm : hash_map), perm_eq g h -> perm_eq (color_refine_kmap g hm) (color_refine_kmap h hm).
+Proof. by apply color_perm_graph_kmap. Qed.
 
-  Lemma color_perm_hm_kmap :
-    forall hm p : hash_map,
-      perm_eq p hm ->
-      forall g : seq (triple I B L), perm_eq (color_kmap g hm) (color_kmap g p).
-  Proof. by move=> hm p peq g; rewrite perm_sym. Qed.
+Lemma color_perm_hm_kmap :
+  forall hm p : hash_map,
+    perm_eq p hm ->
+    forall g : seq (triple I B L), perm_eq (color_kmap g hm) (color_kmap g p).
+Proof. by move=> hm p peq g; rewrite perm_sym. Qed.
 
-  Lemma color_refine_perm_hm_kmap :
-    forall (g : seq (triple I B L)) (hm p : hash_map),
-      perm_eq hm p ->
-      perm_eq (color_refine_kmap g hm) (color_refine_kmap g p).
-  Proof. by move=> g hm p peq. Qed.
+Lemma color_refine_perm_hm_kmap :
+  forall (g : seq (triple I B L)) (hm p : hash_map),
+    perm_eq hm p ->
+    perm_eq (color_refine_kmap g hm) (color_refine_kmap g p).
+Proof. by move=> g hm p peq. Qed.
 
-  Lemma color_ubs_kmap :
-    forall (hm : hash_map) (g : seq (triple I B L)),
-      uniq (bnodes_hm hm) -> uniq (bnodes_hm (color_kmap g hm)).
-  Proof. by move=> hm g ubs. Qed.
+Lemma color_ubs_kmap :
+  forall (hm : hash_map) (g : seq (triple I B L)),
+    uniq (bnodes_hm hm) -> uniq (bnodes_hm (color_kmap g hm)).
+Proof. by move=> hm g ubs. Qed.
 
-  Lemma color_refine_ubs_kmap :
-    forall (hm : hash_map) (g : seq (triple I B L)),
-      uniq (bnodes_hm hm) -> uniq (bnodes_hm (color_refine_kmap g hm)).
-  Proof. by apply color_ubs_kmap. Qed.
+Lemma color_refine_ubs_kmap :
+  forall (hm : hash_map) (g : seq (triple I B L)),
+    uniq (bnodes_hm hm) -> uniq (bnodes_hm (color_refine_kmap g hm)).
+Proof. by apply color_ubs_kmap. Qed.
 
-  Lemma color_refine_good_hm_kmap : forall (g : seq (triple I B L)) (hm : hash_map),
-                          bnodes_hm hm =i get_bts g -> bnodes_hm (color_refine_kmap g hm) =i get_bts g.
-  Proof. by apply color_good_hm_kmap. Qed.
+Lemma color_refine_good_hm_kmap : forall (g : seq (triple I B L)) (hm : hash_map),
+                        bnodes_hm hm =i get_bts g -> bnodes_hm (color_refine_kmap g hm) =i get_bts g.
+Proof. by apply color_good_hm_kmap. Qed.
 
-  Lemma color_refine_inv_kmap : forall (g : seq (triple I B L)) (hm : hash_map),
-                      good_hash_map_for g hm -> good_hash_map_for g (color_refine_kmap g hm).
-  Proof. by apply color_inv_kmap. Qed.
+Lemma color_refine_inv_kmap : forall (g : seq (triple I B L)) (hm : hash_map),
+                    good_hash_map_for g hm -> good_hash_map_for g (color_refine_kmap g hm).
+Proof. by apply color_inv_kmap. Qed.
 
-  Lemma color_refine_post_relabeling_kmap : forall (g : seq (triple I B L)) (hm : hash_map) (mu : B -> B),
-                                  {in get_bts g &, injective mu} ->
-                                  {in bnodes_hm hm &, injective mu} ->
-                                  perm_eq (color_refine_kmap (relabeling_seq_triple mu g) (map1 mu hm))
-                                    (map1 mu (color_refine_kmap g hm)).
-  Proof. by move=> g hm mu ? ? ; apply color_post_relabeling_kmap. Qed.
+Lemma color_refine_post_relabeling_kmap : forall (g : seq (triple I B L)) (hm : hash_map) (mu : B -> B),
+                                {in get_bts g &, injective mu} ->
+                                {in bnodes_hm hm &, injective mu} ->
+                                perm_eq (color_refine_kmap (relabeling_seq_triple mu g) (map1 mu hm))
+                                  (map1 mu (color_refine_kmap g hm)).
+Proof. by move=> g hm mu ? ? ; apply color_post_relabeling_kmap. Qed.
 
-  Lemma mark_hash_kmap_bnodes (hm : hash_map) :
-    forall (b : B) (n : nat),
-    b \in bnodes_hm hm ->
-    bnodes_hm (mark_hash_kmap_2 b n hm) = bnodes_hm hm.
-  Proof.
-  move=> b n.
-  rewrite /mark_hash_kmap_2.
-  rewrite set_nthE.
-  rewrite (hm_zip hm).
-  set hm' := zip _ _.
-  rewrite find_index_eq_bnode; last by apply size_proj.
-  rewrite -index_mem size_map /bnodes_hm.
-  have eq_size_proj : size [seq i.1 | i <- hm] = size [seq i.2 | i <- hm].
-    by rewrite size_proj.
-  rewrite zip_proj1 // {1}/hm' size_zip eq_size_proj minn_refl.
-  move=> b_in; rewrite b_in.
-  rewrite /= {}/hm' -(hm_zip hm).
-  move: b_in {eq_size_proj}.
-  elim: hm=> [//| hd tl IHtl] /=.
-  case_eq (hd.1 == b).
-  by move=> /eqP ->; rewrite /= eqxx /= drop0.
-  by move=> -> /==> /IHtl ->.
-  Qed.
+Lemma mark_hash_kmap_bnodes (hm : hash_map) :
+  forall (b : B) (n : nat),
+  b \in bnodes_hm hm ->
+  bnodes_hm (mark_hash_kmap_2 b n hm) = bnodes_hm hm.
+Proof.
+move=> b n.
+rewrite /mark_hash_kmap_2.
+rewrite set_nthE.
+rewrite (hm_zip hm).
+set hm' := zip _ _.
+rewrite find_index_eq_bnode; last by apply size_proj.
+rewrite -index_mem size_map /bnodes_hm.
+have eq_size_proj : size [seq i.1 | i <- hm] = size [seq i.2 | i <- hm].
+  by rewrite size_proj.
+rewrite zip_proj1 // {1}/hm' size_zip eq_size_proj minn_refl.
+move=> b_in; rewrite b_in.
+rewrite /= {}/hm' -(hm_zip hm).
+move: b_in {eq_size_proj}.
+elim: hm=> [//| hd tl IHtl] /=.
+case_eq (hd.1 == b).
+by move=> /eqP ->; rewrite /= eqxx /= drop0.
+by move=> -> /==> /IHtl ->.
+Qed.
 
-  Lemma good_mark_kmap (g : seq (triple I B L)) (hm : hash_map):
-    bnodes_hm hm =i get_bts g ->
-      forall b : B, b \in bnodes_hm hm -> bnodes_hm (mark_kmap_2 b hm) =i get_bts g.
-  Proof.
-  move=> mem_eq b bin.
-  by rewrite mark_hash_kmap_bnodes //; apply mem_eq.
-  Qed.
+Lemma good_mark_kmap (g : seq (triple I B L)) (hm : hash_map):
+  bnodes_hm hm =i get_bts g ->
+    forall b : B, b \in bnodes_hm hm -> bnodes_hm (mark_kmap_2 b hm) =i get_bts g.
+Proof.
+move=> mem_eq b bin.
+by rewrite mark_hash_kmap_bnodes //; apply mem_eq.
+Qed.
 
-  Lemma mark_size (b : B) (hm : hash_map) :
-    b \in (bnodes_hm hm) ->
-    size (mark_kmap_2 b hm) = size hm.
-  Proof.
-  rewrite /mark_kmap_2/mark_hash_kmap_2.
-  elim: hm (fresh hm)=> [//| hd tl IHtl] n.
-  rewrite /= /mark_kmap_2/mark_hash_kmap_2; case: ifP=> [//|].
-  rewrite in_cons /eq_bnode/pred_eq/pred1 eq_sym/==> -> /= in_tl.
-  by rewrite IHtl.
-  Qed.
+Lemma mark_size (b : B) (hm : hash_map) :
+  b \in (bnodes_hm hm) ->
+  size (mark_kmap_2 b hm) = size hm.
+Proof.
+rewrite /mark_kmap_2/mark_hash_kmap_2.
+elim: hm (fresh hm)=> [//| hd tl IHtl] n.
+rewrite /= /mark_kmap_2/mark_hash_kmap_2; case: ifP=> [//|].
+rewrite in_cons /eq_bnode/pred_eq/pred1 eq_sym/==> -> /= in_tl.
+by rewrite IHtl.
+Qed.
 
 Lemma part_of_in_gen_part (hm : hash_map) (n : nat) :
   n \in hashes_hm hm -> part_of hm n \in gen_partition hm.
@@ -2964,16 +2890,16 @@ Lemma mark_inv_kmap (g : seq (triple I B L)) (hm : hash_map) b :
   Proof. exact: choose_part_not_nil_kmap. Qed.
 
   Definition template_kmap := @template disp I B L nat_inj cmp
-                                init_hash choose_part_kmap color_kmap color_refine_kmap
+                                init_hash_kmap choose_part_kmap color_kmap color_refine_kmap
                                 mark_kmap_2 M_kmap markP_kmap color_refineP_kmap.
 
   Lemma uniq_kmap (g : rdf_graph I B L) : uniq (template_kmap g).
   Proof.
-  apply (@uniq_template disp I B L nat_inj nat_inj_ cmp init_hash good_init init_hash_ubs
-           choose_part_kmap in_part_in_hm_kmap color_kmap color_refine_kmap
-           color_good_hm_kmap color_ubs_kmap color_refine_good_hm_kmap
-           color_refine_ubs_kmap mark_kmap_2 good_mark_kmap mark_ubs_kmap M_kmap markP_kmap
-           color_refineP_kmap).
+  apply (@uniq_template disp I B L nat_inj nat_inj_ cmp init_hash_kmap good_init_kmap
+           init_hash_ubs_kmap choose_part_kmap in_part_in_hm_kmap color_kmap
+           color_refine_kmap color_good_hm_kmap color_ubs_kmap color_refine_good_hm_kmap
+           color_refine_ubs_kmap mark_kmap_2 good_mark_kmap mark_ubs_kmap M_kmap
+           markP_kmap color_refineP_kmap).
   by case: g.
   Qed.
 
@@ -2983,8 +2909,8 @@ Lemma mark_inv_kmap (g : seq (triple I B L)) (hm : hash_map) b :
   Theorem kmap_isocan : (@effective_isocanonical_mapping I B L kmap_rdf).
   Proof.
   exact: (@template_isocan disp I B L nat_inj nat_inj_ cmp cmp_anti cmp_total cmp_trans
-            can_extremum init_hash good_init init_hash_inj_rel init_hash_perm_graph
-            init_hash_ubs init_hash_inv choose_part_kmap choose_part_kmap_order
+            can_extremum init_hash_kmap good_init_kmap init_hash_inj_rel_kmap init_hash_perm_graph_kmap
+            init_hash_ubs_kmap init_hash_inv_kmap choose_part_kmap choose_part_kmap_order
             choose_part_kmap_post_relabeling in_part_in_hm_kmap choose_from_not_fine_kmap color_kmap
             color_refine_kmap color_good_hm_kmap color_inv_kmap color_post_relabeling_kmap
             color_perm_graph_kmap color_perm_hm_kmap color_ubs_kmap color_refine_good_hm_kmap
@@ -2994,15 +2920,4 @@ Lemma mark_inv_kmap (g : seq (triple I B L)) (hm : hash_map) b :
   Qed.
 
 End KmappingInstance.
-
-
-
-
-
-
-
-
-
-
-
 

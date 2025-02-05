@@ -1850,8 +1850,49 @@ Section RDF_Spec.
   by rewrite !mem_cat bnodes_triple_node_terms_mem IHl.
   Qed.
 
+  Lemma mem_bs_nodes (b : B) (ts : seq (triple I B L)):
+    Bnode b \in node_terms ts -> Bnode b \in bnodes_ts ts.
+  Proof.
+  have /perm_mem -> := bnodes_nodes ts.
+  by rewrite mem_filter=> ->.
+  Qed.
+
+  Lemma node_terms_rel_inj_perm (ts : seq (triple I B L)) (mu : B -> B):
+    {in (get_bts ts)&, injective mu} ->
+    perm_eq (node_terms (relabeling_seq_triple mu ts)) (map (relabeling_term mu) (node_terms ts)).
+  Proof.
+  rewrite perm_sym=> mu_inj; apply perm_undup_map_inj.
+  + move=> []trm1 []trm2 => //= /mem_bs_nodes; rewrite bnodes_map_get_bts.
+    rewrite mem_map; last by apply bnode_inj.
+    move=> trm1_in /mem_bs_nodes; rewrite bnodes_map_get_bts mem_map; last by apply bnode_inj.
+    by move=> trm2_in [] /(mu_inj _ _ trm1_in trm2_in) ->.
+  + by apply uniq_node_terms.
+  + set T := node_terms (relabeling_seq_triple mu ts).
+    have /undup_id <- : uniq T by apply uniq_node_terms.
+    apply perm_undup; rewrite /T=> trm.
+    rewrite -mem_map_undup mem_undup=> {mu_inj T}.
+    elim: ts=> [//|hd tl IHtl] /=.
+    by rewrite projs_rel projo_rel !in_cons IHtl.
+  Qed.
+
+  Lemma size_rel_inj (ts : seq (triple I B L)) (mu : B -> B):
+    {in (get_bts ts)&, injective mu} -> size (get_bts ts) = size (get_bts (relabeling_seq_triple mu ts)).
+  Proof.
+  move=> mu_inj.
+  rewrite /get_bts/get_bs.
+  rewrite !size_pmap.
+  have /permP -> := bnodes_nodes ts.
+  have /permP -> := bnodes_nodes (relabeling_seq_triple mu ts).
+  rewrite !count_get_b_is_bnode -!count_filter.
+  have /permP -> := (node_terms_rel_inj_perm mu_inj).
+  elim: (node_terms ts)=> [//| hd tl IHtl].
+  rewrite /= IHtl; congr addn.
+  by case: hd.
+  Qed.
+
   Lemma map_filter_nodes ts (mu : B -> B)  :
-    [seq x <- [seq relabeling_term mu i | i <- node_terms ts] | is_bnode x] = [seq relabeling_term mu i | i <- [seq x <- node_terms ts | is_bnode x]].
+    [seq x <- [seq relabeling_term mu i | i <- node_terms ts] | is_bnode x]
+    = [seq relabeling_term mu i | i <- [seq x <- node_terms ts | is_bnode x]].
   Proof. by elim: (node_terms ts) => [//| []h tl IHl]; rewrite /= IHl. Qed.
 
   Lemma in_nt_in_ts (trm: term I B L) (ts : seq (triple I B L)) :
@@ -1902,7 +1943,7 @@ Section RDF_Spec.
   Qed.
 
   Lemma relabeling_and_constructing : forall (mu : B -> B),
-      (Bnode (I := I) (L := L) \o mu) =1 (relabeling_term mu) \o Bnode.
+    (Bnode (I := I) (L := L) \o mu) =1 (relabeling_term mu) \o Bnode.
   Proof. by move=> mu. Qed.
 
   Lemma in_bnodes_in_node_terms (t : term I B L) ts : t \in bnodes_ts ts -> t \in node_terms ts.
