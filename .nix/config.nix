@@ -8,12 +8,12 @@
   ## either using nixpkgs data or the overlays located in `.nix/rocq-overlays`
   ## and `.nix/coq-overlays`
   ## Will determine the default main-job of the bundles defined below
-  attribute = "coq-rdf";
+  attribute = "rocq-rdf";
 
   ## The attribute for coq compat shim, default to attribute
   ## set this when you need both to differ
   ## (for instance "rocq-elpi" and "coq-elpi")
-  coq-attribute = "coq-rdf";
+  coq-attribute = "rocq-rdf";
 
   ## Set this when the package has no rocqPackages version yet
   ## (either in nixpkgs or in .nix/rocq-overlays)
@@ -51,13 +51,13 @@
   bundles.default = {
     ## You can override Rocq and other Rocq rocqPackages
     ## through the following attribute
-    # rocqPackages.rocq-core.override.version = "9.0";
 
     ## You can override Coq and other Coq coqPackages
     ## through the following attribute
-    coqPackages.coq.override.version = "8.19";
+    rocqPackages.rocq-core.override.version = "9.0";
+    coqPackages.coq.override.version = "9.0";
     # coqPackages.equations.override.version = "8.19.0";
-    coqPackages.mathcomp-ssreflect.override.version = "2.3.0";
+    coqPackages.mathcomp.override.version = "2.3.0";
 
     ## In some cases, light overrides are not available/enough
     ## in which case you can use either
@@ -97,7 +97,7 @@
     ## reverse dependency of a job flagged as "main-job" (see above).
 
     ## Run on push on following branches (default [ "master" ])
-    push-branches = [ "main" ];
+    push-branches = [ "main" "rocq-9.0.0" ];
   };
 
   ## Cachix caches to use in CI
