@@ -1,11 +1,11 @@
 opam-version: "2.0"
-synopsis: "A Coq library for RDF"
+synopsis: "A Rocq library for RDF"
 maintainer: "Tomas Vallejos"
 
 depends: [
-  "coq" {= "8.19.1"}
+  "coq" {= "9.0.0"}
   "coq-mathcomp-ssreflect" {(= "2.3.0")}
-  "coq-equations" {= "1.3+8.19"}
+  "coq-equations" {= "1.3.1+9.0"}
 
 ]
 
