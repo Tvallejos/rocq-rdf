@@ -1,7 +1,7 @@
-# CoqRDF
+# Rocq RDF
 [![Nix CI for bundle default](https://github.com/Tvallejos/rocq-rdf/actions/workflows/nix-action-default.yml/badge.svg)](https://github.com/Tvallejos/rocq-rdf/actions/workflows/nix-action-default.yml)
 
-Development of the RDF model using Coq and the Mathematical Components library.
+Development of the RDF model using Rocq and the Mathematical Components library.
 
 ## Meta
 
