@@ -97,7 +97,7 @@
     ## reverse dependency of a job flagged as "main-job" (see above).
 
     ## Run on push on following branches (default [ "master" ])
-    push-branches = [ "main" "rocq-9.0.0" ];
+    push-branches = [ "main" "mc-2.4" "mc-2.5" ];
   };
 
   ## Cachix caches to use in CI
