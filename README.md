@@ -26,8 +26,7 @@ git clone https://github.com/Tvallejos/CoqRDF.git
 cd CoqRDF
 opam switch create CoqRDF 4.12.0
 eval $(opam env)
-opam pin add coq 8.19.1
-opam pin add coq-mathcomp-ssreflect 2.2.0
-make
+opam remote add coq-released https://rocq-prover.org/opam/released
+opam install .
 ```
 
