@@ -1,9 +1,10 @@
+From HB Require Import structures.
 From mathcomp Require Import all_ssreflect.
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 Import Order.Theory.
-Open Scope order_scope.
+Local Open Scope order_scope.
 
 (* Lemmas complementing math-comp theories *)
 
@@ -67,7 +68,7 @@ Proof. elim : s => [| a t IHts] u /=; first by rewrite in_nil.
               - by apply: IHts y.
 Qed.
 
-Lemma foldl_min (disp: unit) (T: porderType disp) (l: seq T) (x0 : T) :
+Lemma foldl_min (disp : Order.disp_t) (T: porderType disp) (l: seq T) (x0 : T) :
   foldl Order.min x0 l = x0 \/ foldl Order.min x0 l \in l.
 Proof. elim: l x0 => [ | t ts IHts] x0; first by left.
        + rewrite in_cons /=; case: (IHts (Order.min x0 t))=> [ -> |intail] /=.
@@ -76,7 +77,7 @@ Proof. elim: l x0 => [ | t ts IHts] x0; first by left.
        - by right; rewrite intail orbT.
 Qed.
 
-Lemma foldl_max (disp: unit) (T: porderType disp) (l: seq T) (x0 : T) :
+Lemma foldl_max (disp: Order.disp_t) (T: porderType disp) (l: seq T) (x0 : T) :
   foldl Order.max x0 l = x0 \/ foldl Order.max x0 l \in l.
 Proof. elim: l x0 => [ | t ts IHts] x0; first by left.
        + rewrite in_cons /=; case: (IHts (Order.max x0 t))=> [ -> |intail] /=.
@@ -115,7 +116,7 @@ Qed.
 Open Scope order_scope.
 
 Lemma max_foldlP:
-  forall [disp : unit] [T : orderType disp] (l : seq T) (x y : T),
+  forall [disp : Order.disp_t] [T : orderType disp] (l : seq T) (x y : T),
     (foldl Order.max x l) = y -> (x <= y) && all (fun z=> z <= y) l.
 Proof. move=> d T l x y.
        elim: l x=> [z /= -> //| hd t IHt]; first by rewrite Order.POrderTheory.lexx.
@@ -127,7 +128,7 @@ Proof. move=> d T l x y.
 Qed.
 
 Lemma max_foldl_minimum:
-  forall [disp : unit] [T : porderType disp] (l : seq T) (x : T),
+  forall [disp : Order.disp_t] [T : porderType disp] (l : seq T) (x : T),
     (forall y, x <= y) -> foldl Order.max x l = x -> ((l == [::]) || (x \in l)).
 Proof. move=> d T l x minimum.
        elim: l=> [//| hd t IHt].
@@ -266,7 +267,8 @@ Definition mapi {A B : Type} (f : A -> nat ->  B) (s : seq A) : seq B :=
   map (fun an => (f an.1) an.2) (zip s (iota 0 (size s))).
 
 Definition fun_to_fin (T : eqType) (s : seq T) (f : T -> T) : seq_sub s -> T:=
-  fun s0=> let (ssval,_) := s0 in (f ssval).
+  \val.
+  (* fun s0=> let (ssval,_) := s0 in (f ssval). *)
 
 Lemma eq_to_fin (T: eqType) (ft ft' : finType)
   (f : T -> T) (injF: injective f)
@@ -285,7 +287,7 @@ Lemma min_sym : symmetric Order.min.
 Proof. by move=> x y; rewrite Order.POrderTheory.minEle Order.POrderTheory.minElt Order.TotalTheory.leNgt; case: (y < x)%O.
 Qed.
 
-Lemma order_le_neq_antisym (disp : unit) (T : orderType disp) (x y : T) : x != y -> (x <= y) == ~~ (y <= x).
+Lemma order_le_neq_antisym (disp : Order.disp_t) (T : orderType disp) (x y : T) : x != y -> (x <= y) == ~~ (y <= x).
 Proof. rewrite neq_lt !leNgt=> /orP[] lxy; rewrite lxy -leNgt /=; apply /eqP.
        by apply ltW.
        rewrite leNgt negbK; apply/eqP; rewrite eq_sym; apply /eqP.
@@ -407,9 +409,48 @@ Proof.
   by rewrite size_map in jsize; apply: ltn_trans ijle jsize.
 Qed.
 
+HB.howto finType.
+HB.about isFinite.Build.
+
+
+(* Lemma in_map_injP (T1 : eqType) (T2 : eqType) (s : seq T1) (f : T1 -> T2) (us: uniq s): *)
+Lemma in_map_injP' (T1 : choiceType) (T2 : choiceType) (s : seq T1) (f : T1 -> T2) (us: uniq s):
+  reflect {in s&, injective f} (uniq (map f s)).
+Proof.
+  pose T : finType := (seq_sub s).
+  pose g := finfun (fun (x:T) =>  f (\val x)).
+  have eq_fg: forall (t:T1) (tin:(t \in s)), f t = (g (@Sub T1 _ T t tin)).
+    by move=> t tin; rewrite ffunE SubK.
+  have eq_fg': forall (t:T), f (\val t) = (g t).
+    by move=> t; rewrite ffunE.
+  have eq_uniq: uniq [seq f i | i <- s] = uniq [seq g i | i <- (enum T)].
+    have /eq_map eq_map_fg : g =1 (f \o \val) by move=> y /=; rewrite eq_fg'.
+    apply eq_uniq; first by rewrite !size_map -enumT -cardE card_seq_sub.
+    rewrite eq_map_fg (map_comp f \val).
+    apply eq_mem_map.
+    by rewrite -codomE; move=> x; rewrite codom_val.
+  (* Unset Printing Notations. *)
+  have eq_injective : {in s&, injective f} <-> injective g.
+  split=> [inj_f|inj_g].
+    + move=> [x xin] [y yin].
+      rewrite -!eq_fg'=> /(inj_f _ _ (ssvalP _) (ssvalP _)) /= eq_xy.
+      by apply val_inj.
+    + move=> x y xin yin; rewrite !eq_fg=> eq_gxy.
+      suffices [->]: (@Sub _ _ T x xin) = (Sub y yin) by [].
+      by apply inj_g in eq_gxy.
+  rewrite eq_uniq; apply (iffP idP).
+  + move=> ufs t t' tin t'in.
+    rewrite !eq_fg=> eq_gxy.
+    suffices : (@Sub _ _ T t tin) = (Sub t' t'in) by move=> [->].
+    move: eq_gxy.
+    by move:ufs=> /injectiveP inj_g /inj_g ->.
+  + by move=> /eq_injective/injectiveP //.
+ Qed.
+
 Lemma in_map_injP (T1 : eqType) (T2 : eqType) (s : seq T1) (f : T1 -> T2) (us: uniq s):
   reflect {in s&, injective f} (uniq (map f s)).
-Proof. rewrite -[uniq (map f s)]negbK.
+Proof.
+  rewrite -[uniq (map f s)]negbK.
        case: in_map_injPn=> // [noinjf | injf]; constructor.
          case: noinjf => x Dx [y /andP[neqxy /= Dy] eqfxy] injf.
          by case/eqP: neqxy; apply: injf.
@@ -420,7 +461,7 @@ Qed.
 Lemma zip_uniq_proj (T1 T2 : eqType) (s1 : seq T1) (s2 : seq T2) :
   (uniq s1) ->
   (size s1 = size s2) ->
-  forall x y, x \in zip s1 s2 ->
+  forall (x y: T1 * T2), x \in zip s1 s2 ->
                y \in zip s1 s2 ->
                      x.1 = y.1 -> x = y.
   Proof. move=> us1 eqsize /= [x1 x2] [y1 y2].
@@ -431,6 +472,26 @@ Lemma zip_uniq_proj (T1 T2 : eqType) (s1 : seq T1) (s2 : seq T2) :
            move=> /nthP /= /(_ (x0,y0)) [xn]; rewrite size_zip -eqsize minnrefl=> sizes1.
            rewrite nth_zip // => /eqP; rewrite xpair_eqE=> /andP[/eqP x1nth /eqP x2nth].
            move=> /nthP /= /(_ (x0,y0)) [yn]; rewrite size_zip -eqsize minnrefl=> sizes2.
+           rewrite nth_zip // => /eqP; rewrite xpair_eqE=> /andP[/eqP y1nth /eqP y2nth].
+           rewrite -x1nth{x1nth} -x2nth{x2nth} -y1nth{y1nth} -y2nth{y2nth}.
+           by move=> /eqP; rewrite nth_uniq // => /eqP ->; apply/eqP; rewrite eqxx.
+           by rewrite /minn; case e: (_ < _)%N.
+  Qed.
+
+  Lemma zip_uniq_proj2 (T1 T2 : eqType) (s1 : seq T1) (s2 : seq T2) :
+    (uniq s2) ->
+    (size s1 = size s2) ->
+    forall (x y: T1 * T2), x \in zip s1 s2 ->
+                      y \in zip s1 s2 ->
+                            x.2 = y.2 -> x = y.
+  Proof. move=> us1 eqsize /= [x1 x2] [y1 y2].
+         wlog p0 :/ ((T1 * T2)%type).
+         by move=> hwlog; apply: hwlog (x1,x2).
+         case: p0=> x0 y0.
+         suffices minnrefl : minn (size s1) (size s1) = size s1.
+         move=> /nthP /= /(_ (x0,y0)) [xn]; rewrite size_zip -eqsize minnrefl eqsize => sizes1.
+           rewrite nth_zip // => /eqP; rewrite xpair_eqE=> /andP[/eqP x1nth /eqP x2nth].
+           move=> /nthP /= /(_ (x0,y0)) [yn]; rewrite size_zip -eqsize minnrefl eqsize => sizes2.
            rewrite nth_zip // => /eqP; rewrite xpair_eqE=> /andP[/eqP y1nth /eqP y2nth].
            rewrite -x1nth{x1nth} -x2nth{x2nth} -y1nth{y1nth} -y2nth{y2nth}.
            by move=> /eqP; rewrite nth_uniq // => /eqP ->; apply/eqP; rewrite eqxx.
@@ -466,10 +527,11 @@ Lemma zip_uniq_proj (T1 T2 : eqType) (s1 : seq T1) (s2 : seq T2) :
   Lemma sort_nil (T : eqType) (leT : rel T) :
     total leT -> transitive leT -> antisymmetric leT ->
     forall (s1 : seq T),
-    sort leT s1 = [::] -> s1 = [::].
+    (sort leT s1 == [::]) = (s1 == [::]).
   Proof.
     move=> tot trans anti s1; suffices nil_sorted: [::] = sort leT [::].
-      by rewrite nil_sorted=> /(perm_sortP tot trans anti)/perm_nilP ->.
+      apply /idP/idP;last by move=> /eqP->.
+      by rewrite nil_sorted=> /eqP/(perm_sortP tot trans anti)/perm_nilP ->.
     by [].
   Qed.
 
@@ -482,3 +544,174 @@ Lemma zip_uniq_proj (T1 T2 : eqType) (s1 : seq T1) (s2 : seq T2) :
          by move=> ? ? xinn yinn; apply inj_f; rewrite in_cons ?xinn ?yinn orbT.
          by move: xin; rewrite in_cons eq_sym neq /=.
   Qed.
+
+  Lemma size_filter_le {T : Type} (f : T -> bool) (l : seq T) : size (filter f l ) <= size l.
+  Proof.
+  elim: l=> // hd tl IHl /=.
+  by case: ifP=> [//| _]; apply (leq_trans IHl).
+  Qed.
+
+  Lemma map_snd_zip_size (T U: Type) (s1 : seq T) (s2 : seq U) :
+    size s1 = size s2 -> map snd (zip s1 s2) = s2.
+  Proof.
+  elim: s2 s1=> [//|hd tl IHtl] [//|// a tla] eq_size /=.
+  by congr cons; rewrite IHtl //; move: eq_size=> /=[->].
+  Qed.
+
+  Lemma map_fst_zip_size (T U: Type) (s1 : seq T) (s2 : seq U) :
+    size s1 = size s2 -> map fst (zip s1 s2) = s1.
+  Proof.
+  elim: s2 s1=> [//|hd tl IHtl] [//|// a tla] eq_size /=.
+  by congr cons; rewrite IHtl //; move: eq_size=> /=[->].
+  Qed.
+
+  Lemma zip_proj1 (T S : Type) (s1 : seq T) (s2 : seq S) :
+    size s1 = size s2 ->
+    map fst (zip s1 s2) = s1.
+  Proof.
+  elim: s1 s2=> [| hd tl IHtl] s2; first by case: s2.
+  case: s2=> [//|hd2 tl2] /=[]eq_size.
+  by congr cons; apply IHtl.
+  Qed.
+
+  Lemma count_mem_inP (T : eqType) (t : T) (s :seq T):
+    reflect (count_mem t s >= 1) (t \in s).
+  Proof.
+  apply (iffP idP).
+  + rewrite -mem_undup=> t_in.
+    suffices uniq_count: 1 <= count_mem t (undup s).
+      by apply (leq_trans uniq_count (count_undup _ _)).
+    move: t_in (@count_uniq_mem _ (undup s) t (undup_uniq s)).
+    by move=> -> ->.
+  + elim: s=> [//|hd tl IHtl].
+    rewrite /= in_cons eq_sym.
+    case: (_ == _)=> [//|/=].
+    by rewrite add0n; apply IHtl.
+  Qed.
+
+  Corollary count_mem_1_in (T : eqType) (t : T) (s : seq T):
+    count_mem t s = 1 -> t \in s.
+  Proof. by move=> eq; apply /count_mem_inP; rewrite eq. Qed.
+
+  Lemma neq_SSnm (n m: nat):
+    n.+1 != m.+1 -> n != m.
+  Proof.
+  rewrite /negb.
+  case_eq (n == m)=> [|//].
+  by move=> /eqP ->; rewrite eqxx.
+  Qed.
+
+  Lemma neq_count_mem {T : eqType} {t1 t2 : T} (s : seq T):
+    count_mem t1 s != count_mem t2 s -> t1 != t2.
+  Proof.
+  elim:s=> [//| hd tl IHtl] /=.
+  case_eq (hd == t1); case_eq (hd == t2).
+  + move=> _ _ /=.
+    by rewrite !add1n=> /neq_SSnm/IHtl->.
+  + by move=> concl /eqP <-; rewrite concl.
+  + by move /eqP ->; rewrite eq_sym=> ->.
+  + by move=> _ _ /=; rewrite add0n=> /IHtl.
+  Qed.
+
+
+  Lemma count_filter (T : Type) (a : pred T) (s : seq T):
+    count a s = count a (filter a s).
+  Proof.
+  elim s=> [//|hd tl IHtl] /=.
+  by case_eq (a hd)=> /= [->|]; rewrite IHtl.
+  Qed.
+
+  Lemma le_count_rem (T : eqType) (x : T) (P : pred T) (s : seq T):
+    count P s <= count P (rem x s) + (x \in s) && P x.
+  Proof.
+  rewrite count_rem addnBC.
+  set x' := (_ && _); set n:= count P s.
+  by case: x'; case: n=> //.
+  Qed.
+
+  Lemma nat_coq_nat (n m : nat) :  (n < m)%nat = (n < m). Proof. by []. Qed.
+  Lemma nat_coq_le_nat (n m : nat) :  (n <= m)%N = (n <= m). Proof. by []. Qed.
+
+  Lemma lt_count_subpred (T : eqType) (p1 p2 : pred T) (s : seq T):
+    subpred p1 p2 -> (exists (x:T), [&& p2 x, ~~ (p1 x) & x \in s]) ->
+    count p1 s < count p2 s.
+  Proof.
+  move=> spred [x /and3P[p2x /negPf p1xPn]].
+  elim s=> [//|hd tl IHtl].
+  rewrite in_cons=> /orP[/eqP <-|/IHtl count_tl] /=.
+  + rewrite p2x p1xPn /= add0n add1n.
+    by apply (leq_ltn_trans (sub_count spred _) (ltnSn _)).
+  case_eq (p1 hd)=> [/spred -> | _] /=.
+  + by rewrite !add1n -nat_coq_nat /= ltnS nat_coq_nat count_tl.
+  case: (p2 hd); rewrite !add0n ?add1n; last by rewrite count_tl.
+  by apply (ltn_trans count_tl (ltnSn _)).
+  Qed.
+
+  Lemma count_mem_filter (n m : nat) (s: seq nat):
+    n != m -> count_mem m s = count_mem m (filter (predC1 n) s).
+  Proof.
+  elim: s=> [//|hd tl IHtl] /=.
+  case: ifP.
+  + rewrite /==> /negPf neq_hdn /negPf neq_hdm.
+    by congr addn; apply IHtl; apply /negPf.
+  rewrite {1}/negb.
+  case: ifP=> [/eqP -> _|//] neq_nm.
+  by rewrite (negPf neq_nm) (IHtl neq_nm).
+  Qed.
+
+  Lemma allPn_count (T : Type) (a : pred T) (s : seq T): all (predC a) s = (count a s == 0).
+  Proof.
+  apply /idP/idP; elim: s=> [//| hd tl IHtl] /=.
+  + by move=> /andP[/negPf -> /IHtl ->].
+  case_eq (a hd); first by rewrite add1n //.
+  by move=> _ /= /IHtl ->.
+  Qed.
+
+
+
+  Lemma eq_map_zip_nseq : forall (T U : Type) (s : seq T) (u : U),
+    map (fun t=> (t,u)) s = zip s (nseq (size s) u).
+  Proof.
+  move=> T U s u.
+  by elim: s=> [//|hd tl IHtl] /=; rewrite IHtl.
+  Qed.
+
+  Lemma perm_eq_zip_eql (T U : eqType) (s1 s2 : seq T) (s3 : seq U):
+    size s1 = size s2 ->
+    size s1 = size s3 ->
+    constant s3 ->
+    perm_eq s1 s2 ->
+    perm_eq (zip s1 s3) (zip s2 s3).
+  Proof.
+  case: s2; case: s3; case: s1=> //.
+  move=> a1 tl1 a3 tl3 a2 tl2 /= [eq_size12] [eq_size13] const_s.
+  move=> /(perm_map (fun t=> (t,a3))); rewrite !eq_map_zip_nseq /=.
+  suffices tl3_nseq : (nseq (size tl1) a3) = tl3.
+    by rewrite -eq_size12 !tl3_nseq.
+  rewrite eq_size13.
+  elim: tl3 const_s {eq_size13}=> [//|hd tl IHtl] /=.
+  by move=> /andP[/eqP -> eq_tl]; rewrite IHtl //.
+  Qed.
+
+
+Lemma size_proj (T1 T2 : Type) (s : seq (T1 * T2)) :
+  size [seq i.2 | i <- s] = size [seq i.1 | i <- s].
+Proof. by elim: s=> [//| h tl IHtl] /=; rewrite IHtl. Qed.
+
+Lemma pair_zip_in (T1 T2 : eqType) (s1 : seq T1) (s2 : seq T2) (x0 x : T2) (y1: T1) (i : nat) :
+  size s1 = size s2 -> (i < size s2)%N -> nth x0 s2 i = x ->
+  exists t1, (t1,x) \in zip s1 s2 /\ nth (t1,x0) (zip s1 s2) i = (t1,x).
+Proof.
+move=> eq_size i_in <-.
+exists (nth y1 s1 i); split.
++ rewrite -nth_zip //; apply mem_nth.
+  by rewrite size_zip eq_size ltn_min i_in.
++ rewrite nth_zip //; congr pair.
+  by apply set_nth_default; rewrite eq_size.
+Qed.
+
+Lemma head_seq_seq_in (T : eqType) (s : seq (seq T)) d x : 
+   x \in (head d s) -> (x \in d) \/ exists t, (t \in s) /\ (x \in t).
+Proof.
+by case: s d => [| y s] d //= ?; [by left | right]; exists y; rewrite ?mem_head.
+Qed.

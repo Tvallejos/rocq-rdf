@@ -281,7 +281,7 @@ Section ChoiceTriple.
 End ChoiceTriple.
 
 Section OrderTriple.
-  Variable d : unit.
+  Variable d : Order.disp_t.
   Variables I B L : orderType d.
 
   Definition le_triple : rel (triple I B L) :=
@@ -347,9 +347,9 @@ Section OrderTriple.
 
 End OrderTriple.
 
-Fact triple_display : unit. exact tt. Qed.
+Fact triple_display : Order.disp_t. exact: Order.Disp tt tt. Qed.
 
-HB.instance Definition _ (d : unit) (I B L: orderType d):=
+HB.instance Definition _ (d : Order.disp_t) (I B L: orderType d):=
   Order.isOrder.Build triple_display (triple I B L)
     (@lt_triple_def d I B L) (@meet_triple_def d I B L) (@join_triple_def d I B L)
     (@le_triple_anti d I B L) (@le_triple_trans d I B L) (@le_triple_total d I B L).
