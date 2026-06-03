@@ -6,11 +6,11 @@
 
 { lib, mkCoqDerivation, which, coq
   ## declare extra dependencies here, to be used in propagateBuildInputs e.g.
-  , mathcomp-ssreflect , equations
+  , mathcomp, equations
   , version ? null }:
 
 with lib; mkCoqDerivation {
-  pname = "coq-rdf";
+  pname = "rocq-rdf";
   ## you can configure the domain, owner and repository, the default are:
   # repo = "coq-rdf";
   # owner = "coq-community";
@@ -30,7 +30,7 @@ with lib; mkCoqDerivation {
   ## Declare existing releases
   ## leave sha256 empty at first and then copy paste
   ## the resulting sha given by the error message
-  # release."1.1.1".sha256 = "";
+  # release."0.1".sha256 = "";
   ## if the tag is not exactly the version number you can amend like this
   # release."1.1.1".rev = "v1.1.1";
   ## if a consistent scheme gives the tag from the release number, you can do like this:
@@ -40,7 +40,7 @@ with lib; mkCoqDerivation {
   ## - arbitrary nix packages (you need to require them at the beginning of the file)
   ## - Coq packages (require them at the beginning of the file)
   ## - OCaml packages (use `coq.ocamlPackages.xxx`, no need to require them at the beginning of the file)
-  propagatedBuildInputs = [ equations mathcomp-ssreflect ]; ## e.g. `= [ mathcomp coq-elpi ]`
+  propagatedBuildInputs = [ equations mathcomp.ssreflect ]; ## e.g. `= [ mathcomp coq-elpi ]`
 
   ## Does the package contain OCaml code?
   # mlPlugin = false;
