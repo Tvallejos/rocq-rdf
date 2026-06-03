@@ -34,7 +34,7 @@
   ## /!\ Remove this field as soon as the package is available on nixpkgs.
   ## /!\ Manual overlays in `.nix/rocq-overlays` or `.nix/coq-overlays`
   ##     should be preferred then.
-  buildInputs = [ "equations" "mathcomp" ];
+  buildInputs = [ "equations" "mathcomp-ssreflect" ];
 
   ## Indicate the relative location of your _CoqProject
   ## If not specified, it defaults to "_CoqProject"
