@@ -57,7 +57,7 @@
     rocqPackages.rocq-core.override.version = "9.0";
     coqPackages.coq.override.version = "9.0";
     # coqPackages.equations.override.version = "8.19.0";
-    coqPackages.mathcomp.override.version = "2.4.0";
+    coqPackages.mathcomp.override.version = "2.5.0";
 
     ## In some cases, light overrides are not available/enough
     ## in which case you can use either
