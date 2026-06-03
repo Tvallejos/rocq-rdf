@@ -123,7 +123,7 @@ Proof. move=> d T l x y.
        move=> x. rewrite /= Order.POrderTheory.maxEle.
        case e: (x <= hd); move=> /IHt/andP[hdmax ->]; rewrite hdmax !andbT /=.
        + by apply (Order.POrderTheory.le_le_trans e hdmax (Order.POrderTheory.lexx _)).
-       + rewrite Order.TotalTheory.leNgt /= Bool.negb_false_iff in e.
+       + rewrite Order.TotalTheory.leNgt in e; apply negbFE in e.
          by apply (Order.POrderTheory.le_le_trans (Order.POrderTheory.ltW e) hdmax (Order.POrderTheory.lexx _)).
 Qed.
 
@@ -153,7 +153,7 @@ Proof.
   elim : ts ss t s=> [|t' ts' IHts] /= ss t s; first by case: ss; rewrite in_nil.
   + case: ss=> [//|s' ss'].
     rewrite in_cons; case/orP; first by rewrite !in_cons xpair_eqE=> /andP [-> ->].
-    by rewrite in_cons=> /IHts/andP [-> ->]; rewrite !Bool.orb_true_r.
+    by rewrite in_cons=> /IHts/andP [-> ->]; rewrite !orbT. 
 Qed.
 
 Lemma in_zip_sym (S T : eqType) (ss : seq S) (ts : seq T) s t:
@@ -161,7 +161,7 @@ Lemma in_zip_sym (S T : eqType) (ss : seq S) (ts : seq T) s t:
 Proof.
   elim: ts ss=> [[//|//]| t' ts' IHts] ss.
   + case: ss=> [| s' ss']; first by rewrite zip0s.
-  - rewrite /= !in_cons. f_equal; first by rewrite !xpair_eqE Bool.andb_comm.
+  - rewrite /= !in_cons. f_equal; first by rewrite !xpair_eqE andbC.
     by rewrite IHts.
 Qed.
 
@@ -409,11 +409,6 @@ Proof.
   by rewrite size_map in jsize; apply: ltn_trans ijle jsize.
 Qed.
 
-HB.howto finType.
-HB.about isFinite.Build.
-
-
-(* Lemma in_map_injP (T1 : eqType) (T2 : eqType) (s : seq T1) (f : T1 -> T2) (us: uniq s): *)
 Lemma in_map_injP' (T1 : choiceType) (T2 : choiceType) (s : seq T1) (f : T1 -> T2) (us: uniq s):
   reflect {in s&, injective f} (uniq (map f s)).
 Proof.

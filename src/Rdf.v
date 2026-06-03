@@ -257,7 +257,8 @@ Section Rdf.
       Lemma relabeling_comp (B1 B2: eqType) g (mu1 : B -> B1) (mu2: B1 -> B2) :
         forall u1 u2 u12,
           perm_eq (@relabeling B1 B2 mu2 (@relabeling B B1 mu1 g u1) u2) (@relabeling B B2 (mu2 \o mu1) g u12).
-      Proof. move=> u1 u2 u12; rewrite rdf_perm_mem_eq /relabeling/==> x /=.
+      Proof. move=> u1 u2 u12; apply (rdf_perm_mem_eq _ _). 
+             rewrite /relabeling/==> x /=.
              suffices ->: {| graph := relabeling_seq_triple mu2 (relabeling_seq_triple mu1 g); ugraph := u2 |} = {| graph := relabeling_seq_triple (mu2 \o mu1) g; ugraph := u12 |} by [].
              by apply rdf_inj; rewrite /= relabeling_seq_triple_comp.
       Qed.
@@ -365,7 +366,7 @@ Section Rdf.
 
         Lemma all_bnodes_ts ts : all (@is_bnode I B L) (bnodes_ts ts).
         Proof. elim: ts=> [// | t ts IHts].
-               by rewrite bnodes_ts_cons all_undup all_cat IHts Bool.andb_true_r all_bnodes_triple_is_bnode.
+               by rewrite bnodes_ts_cons all_undup all_cat IHts andbT all_bnodes_triple_is_bnode.
         Qed.
 
         Lemma all_bnodes_perm ts s:
@@ -433,7 +434,7 @@ Section Rdf.
           Lemma mem_ts_mem_triple_bs t ts b :
             t \in ts -> Bnode b \in bnodes_triple t -> b \in get_bs (bnodes_ts ts).
           Proof. move=> /mem_triple_terms_ts; case t=> [[]]s []p []o ? ? //= /and3P[sint pint oint];
-                                                  rewrite /bnodes_triple filter_undup mem_undup ?in_cons in_nil // Bool.orb_false_r=> /eqP[eq]; move: sint oint; rewrite ?eq=> sint oint; rewrite bterm_eq_mem_get_bs //.
+                                                  rewrite /bnodes_triple filter_undup mem_undup ?in_cons in_nil // orbF => /eqP[eq]; move: sint oint; rewrite ?eq=> sint oint; rewrite bterm_eq_mem_get_bs //.
                  by move: eq=> /eqP; case/orP=> /eqP[->].
           Qed.
 
@@ -1212,7 +1213,7 @@ Section Rdf.
                                                                  |}.
                           by apply (mem_ts_mem_triple_bts t'inh2 bnode_in).
                         by rewrite /bnodes_triple/terms_triple filter_undup mem_undup -mem_rev -filter_rev /= in_cons eqxx.
-                +  rewrite Bool.orb_false_iff.
+                +  move=> /= /negbT; rewrite negb_or=> /andP.
                    case: t t' t'inh2 wfs wfp eqtt' eqo eqs eqp=> //= [[]]s []p []o sib pii; case=> //= [[]]s' []p' []o' sib' pii' //= t'inh2 wfs wfp eqtt' eqo eqs eqp [] // _ _.
                    suffices -> : {|
                                       subject := Iri s;
@@ -1332,13 +1333,13 @@ Section Rdf.
                                                                 subject_in_IB := ib;
                                                                                  predicate_in_I := wfp2
                                |} = relabeling_triple mu12 t.
-                 by apply tin2.
+                 by apply tin2. 
                  apply triple_inj=> /=.
                + by rewrite projs_rel.
                + by rewrite projp_rel; case : (predicate t) wfp2=> //.
                + by rewrite projo_rel.
              move: wfs {tin}.
-             by rewrite relabeling_term_comp -relabeling_term_preserves_is_in_ib.
+             by rewrite relabeling_term_comp; apply relabeling_term_preserves_is_in_ib.
                  apply triple_inj=> /=.
                + by rewrite projs_rel relabeling_term_comp.
                + by rewrite projp_rel; case : (predicate t) wfp2=> //.
@@ -1409,7 +1410,7 @@ Section Rdf.
           eqb_rdf (M g1) (M g2) -> iso g1 g2.
         Proof.
           have isog1k1 : iso g1 (M g1). by apply iso_output.
-          have isog2k2 : iso (M g2) g2. by rewrite iso_sym; apply iso_output.
+          have isog2k2 : iso (M g2) g2. by apply iso_sym; apply iso_output.
           by move=> /eqiso peqm; apply: iso_trans (iso_trans isog1k1 peqm) isog2k2.
         Qed.
 
@@ -1433,7 +1434,7 @@ Section Rdf.
           iso_ts ts1 ts2 -> iso_ts (M ts1) (M ts2).
         Proof.
           have isog1k1 : iso_ts (M ts1) ts1.
-            rewrite iso_ts_sym //; last by apply (uniq_output _).
+            apply iso_ts_sym=> //. by apply (uniq_output _).
             by apply iso_output.
           have isog2k2 : iso_ts ts2 (M ts2). by apply iso_output.
           by move=> peqm; apply: (iso_ts_trans (iso_ts_trans isog1k1 peqm) isog2k2).
@@ -1442,7 +1443,7 @@ Section Rdf.
         Lemma iso_can_trans M g1 g2 (iso_output : mapping_is_iso_mapping M) :
           iso g1 g2 -> iso (M g1) (M g2).
         Proof.
-          have isog1k1 : iso (M g1) g1. by rewrite iso_sym; apply iso_output.
+          have isog1k1 : iso (M g1) g1. by apply iso_sym; apply iso_output.
           have isog2k2 : iso g2 (M g2). by apply iso_output.
           move=> peqm; apply: (iso_trans (iso_trans isog1k1 peqm) isog2k2).
         Qed.
@@ -1551,19 +1552,19 @@ Section Rdf.
   Lemma join_stA : associative join_st.
   Proof.
   move=> x y z; rewrite /join_st !(fun_if, if_arg).
-  repeat (try case : ifP); rewrite // !lt_st_def Bool.andb_false_iff /negb.
-  + move=> /andP[_ leyz]; case: ifP=> [/eqP -> //|_ [//|]].
-    * case: ifP=> [/eqP -> //|nyx nlexz /andP[_ lexy _]].
+  repeat (try case : ifP); rewrite // !lt_st_def /negb.
+  + move=> /andP[_ leyz]; case: ifP => [/eqP -> //| /= _ // /negbT].
+    * case: ifP=> [/eqP -> //| /negbT nyx /negPf nlexz /andP[_ lexy _]].
       suffices lezx : le_st z x.
         have lexz := (le_st_trans lexy leyz).
         by apply le_st_anti; apply /andP ; split=> //.
       by move: (le_st_total x z); rewrite nlexz.
-  + move=> /andP[nzy leyz]; case: ifP=> [/eqP -> //|_ [//|]].
+  + move=> /andP[nzy leyz]; case: ifP=> [/eqP -> //| _ /= ].
     * case: ifP=> [/eqP eqxy| nyx nlexz /= nlexy lexz]; first by move: leyz; rewrite eqxy=> ->.
       suffices lezx : le_st z x.
         by apply le_st_anti; apply /andP ; split=> //.
       by move: (le_st_total x z) (le_st_total x y); rewrite nlexz nlexy.
-  + case: ifP=> [/eqP -> _ _ /= |nzy [//|]]; first by case: ifP=> [//|_ ->].
+  + case: ifP=> [/eqP -> _ _ /= |nzy /=]; first by case: ifP=> [//|_ ->].
     * case: ifP=> [/eqP -> -> _ _| nyx nlexz /= _ nlexy]; first by rewrite andbF.
       case: ifP=> //= nzx lexz.
         suffices lezx : le_st z x.
@@ -1585,8 +1586,9 @@ Section Rdf.
     case: ifP; case: ifP=> //.
     + move=> /andP[neqxy leyx] /andP[neqyx lexy].
       by apply /eqP/le_st_antisym/andP;split.
-    + rewrite !Bool.andb_false_iff /negb => [[|leyx]]; first by case: ifP=> // /eqP ->.
-      by case: ifP=> [/eqP -> //|  _ [//|lexy]]; move: (le_st_total x y); rewrite lexy leyx.
+    + move=> /negbT; rewrite negb_and /negb=> /orP[|]; first by case: ifP=> // /eqP ->.
+      case: ifP=> // leyx _ => /negbT; rewrite negb_and.
+      by case: ifP=> [/eqP -> //|  _ /orP[ // | /negPf lexy]]; move: (le_st_total x y); rewrite lexy leyx.
   Qed.
 
 
@@ -1717,7 +1719,7 @@ Section OrderRdf.
   Proof. exact: Order.TotalTheory.perm_sort_leP ts1 ts2. Qed.
 
   Lemma rdf_leP' ts1 ts2 : (sort le_triple ts1 = sort le_triple ts2) <-> (perm_eq ts1 ts2).
-  Proof. exact: Bool.reflect_iff (Order.TotalTheory.perm_sort_leP ts1 ts2). Qed.
+  Proof. exact: rwP (Order.TotalTheory.perm_sort_leP ts1 ts2). Qed.
 
 End OrderRdf.
 
@@ -1763,7 +1765,7 @@ Section RDF_Spec.
   Proof.
   case: trm=> [i|l|b] btb iti in_node // iib; rewrite /is_in_ib.
   by rewrite (iti i in_node).
-  + have := btb (Bnode b). by rewrite Bool.orb_comm=> ->.
+  + have := btb (Bnode b). by rewrite orbC=> ->.
   Qed.
 
   Lemma rel_pres_i ts (mu : term I B L -> term I B L) (trm : term I B L) :
@@ -2041,15 +2043,16 @@ Section RDF_Spec.
       suffices /(perm_eq_relab_uniq_ts u2) [u peq] : perm_eq (relabeling_seq_triple mu ts1) ts2.
         by apply /and3P; split=> //.
       suffices pwf : pres_wf ts1 mu_trm.
-        move: adj_pres=> /(_ pwf) adj_pres.
+        move: adj_pres=> /(_ pwf) adj_pres'.
         apply uniq_perm=> //.
-        (**)
+(*  *)
         - rewrite map_inj_in_uniq //.
           by apply inj_get_bts_inj_ts; apply: (is_pre_iso_ts_inj2 piso_mu).
         - move=> t; apply /idP/idP.
           * move=> /mapP[/= t' tin ->].
             have tin2 := tin.
-            rewrite (adj_pres t') in tin.
+            move: tin.
+            move=> /(adj_pres' t') tin.
             suffices /andP[wfs wfp]: is_in_ib (mu_trm (subject t')) && is_in_i (predicate t').
               have := tin wfs wfp.
               suffices -> : {|
@@ -2097,7 +2100,7 @@ Section RDF_Spec.
                    -- by move=> /i_id ->.
                    -- by move=> /l_id ->.
                    -- by move=> _ _ /=; rewrite /comp in muP; rewrite muP.
-              apply adj_pres.
+              apply adj_pres'.
               move=> wfs wfp.
               rewrite /=.
               suffices <- : t =

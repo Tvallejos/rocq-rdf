@@ -270,10 +270,10 @@ Section EqTerm.
   Proof. by case trm. Qed.
 
   Lemma get_bs_nil_all_not_b ts : reflect (get_bs ts = [::]) (all (fun t=> negb (is_bnode t)) ts).
-  Proof. elim: ts=> [//| []a l ihtl]; first by apply Bool.ReflectT.
+  Proof. elim: ts=> [//| []a l ihtl]; first by apply ReflectT.
          + by apply ihtl.
          + by apply ihtl.
-         + by apply Bool.ReflectF.
+         + by apply ReflectF.
   Qed.
 
 End EqTerm.

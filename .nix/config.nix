@@ -57,7 +57,7 @@
     rocqPackages.rocq-core.override.version = "9.0";
     coqPackages.coq.override.version = "9.0";
     # coqPackages.equations.override.version = "8.19.0";
-    coqPackages.mathcomp.override.version = "2.3.0";
+    coqPackages.mathcomp.override.version = "2.4.0";
 
     ## In some cases, light overrides are not available/enough
     ## in which case you can use either
@@ -97,7 +97,7 @@
     ## reverse dependency of a job flagged as "main-job" (see above).
 
     ## Run on push on following branches (default [ "master" ])
-    push-branches = [ "main" "rocq-9.0.0" ];
+    push-branches = [ "main" "mc-2.4" "mc-2.5" ];
   };
 
   ## Cachix caches to use in CI

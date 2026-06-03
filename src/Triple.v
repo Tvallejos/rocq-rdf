@@ -232,7 +232,7 @@ Section OperationsOnTriples.
     have ->: (if s \in [:: p; o]
      then if p \in [:: o] then [:: o] else [:: p; o]
               else s :: (if p \in [:: o] then [:: o] else [:: p; o])) = undup [:: s ; p ; o] by [];
-       rewrite H /= Bool.orb_false_r.
+       rewrite H /= orbF. 
     by move=> T s x; rewrite !topredE mem_undup.
   Qed.
 
