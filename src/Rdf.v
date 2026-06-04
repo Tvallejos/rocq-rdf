@@ -1,5 +1,5 @@
 From HB Require Import structures.
-From mathcomp Require Import all_ssreflect.
+From mathcomp Require Import all_order all_boot.
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
@@ -195,7 +195,7 @@ Section Rdf.
       Qed.
 
       Lemma uniq_rdf_graph g : uniq g. Proof. exact: ugraph. Qed.
-      Hint Resolve uniq_rdf_graph.
+      #[local] Hint Resolve uniq_rdf_graph : core.
 
       Lemma bijective_perm_eq_relabeling_st mu nu ts1 ts2 :
       uniq (relabeling_seq_triple nu ts1) ->
@@ -313,7 +313,7 @@ Section Rdf.
 
       Lemma uniq_terms_ts (i b l : eqType) (ts : seq (triple i b l)) : uniq (terms_ts ts).
       Proof. by apply undup_uniq. Qed.
-      Hint Resolve uniq_terms_ts.
+      #[local] Hint Resolve uniq_terms_ts : core.
 
       Remark uniq_tail (T: eqType) a (t : seq T) : (uniq (a :: t)) -> uniq t.
       Proof. by move=> /andP[_ //]. Qed.
@@ -375,7 +375,7 @@ Section Rdf.
 
         Lemma uniq_bnodes_ts ts : uniq (bnodes_ts ts).
         Proof. exact: undup_uniq. Qed.
-        Hint Resolve uniq_bnodes_ts.
+        #[local] Hint Resolve uniq_bnodes_ts : core.
 
         Lemma i_in_bnodes_ts id ts: Iri id \in bnodes_ts ts = false.
         Proof. by rewrite /bnodes_ts -filter_undup mem_filter. Qed.
@@ -463,7 +463,7 @@ Section Rdf.
 
         Lemma uniq_get_bs ts : uniq (get_bs (bnodes_ts ts)).
         Proof. by rewrite -(undup_get_bsC (uniq_bnodes_ts ts)) undup_uniq. Qed.
-        Hint Resolve uniq_get_bs.
+        #[local] Hint Resolve uniq_get_bs : core.
 
         Lemma uniq_get_bts ts : uniq (get_bts ts).
         Proof. by rewrite uniq_get_bs. Qed.
@@ -609,7 +609,7 @@ Section Rdf.
 
         Lemma uniq_terms {i b l : eqType} (g : rdf_graph i b l) : uniq (terms g).
         Proof. by apply undup_uniq. Qed.
-        Hint Resolve uniq_terms.
+        #[local] Hint Resolve uniq_terms : core.
 
         Lemma terms_cons {i b l : eqType} (trpl : triple i b l)
           (ts : seq (triple i b l)) (us : uniq (trpl :: ts)) :
@@ -663,7 +663,7 @@ Section Rdf.
 
     Lemma uniq_bnodes g : uniq (bnodes g).
     Proof. exact: undup_uniq. Qed.
-    Hint Resolve uniq_bnodes.
+    #[local] Hint Resolve uniq_bnodes : core.
 
     Lemma i_in_bnodes id g: Iri id \in bnodes g = false.
     Proof. by rewrite /bnodes i_in_bnodes_ts. Qed.
@@ -702,7 +702,7 @@ Section Rdf.
 
     Lemma uniq_get_b g : uniq (get_b g).
     Proof. by rewrite /get_b uniq_get_bs. Qed.
-    Hint Resolve uniq_get_b.
+    #[local] Hint Resolve uniq_get_b : core.
 
     Lemma bnodes_map_get_b g : bnodes g = map (fun b=> Bnode b) (get_b g).
     Proof. by rewrite /bnodes -bnodes_map_get_bs. Qed.
@@ -749,12 +749,12 @@ Section Rdf.
     Proof. by apply can_bs_can_rtbs. Qed.
 
     Remark id_bij T: bijective (@id T). Proof. by exists id. Qed.
-    Hint Resolve id_bij.
+    #[local] Hint Resolve id_bij : core.
 
     Section Isomorphism.
-      Hint Resolve uniq_get_bts.
-      Hint Resolve uniq_bnodes_ts.
-      Hint Resolve uniq_get_bs.
+      #[local] Hint Resolve uniq_get_bts : core.
+      #[local] Hint Resolve uniq_bnodes_ts : core.
+      #[local] Hint Resolve uniq_get_bs : core.
 
       Section PreIsomorphism.
 
@@ -1592,7 +1592,7 @@ Section Rdf.
   Qed.
 
 
-  Lemma join_st_idem : idempotent join_st.
+  Lemma join_st_idem : idempotent_op join_st.
   Proof. by move=> ?; rewrite /join_st lt_st_def eqxx. Qed.
 
   Lemma nil_minimum (ts: seq (triple I B L)) : le_st [::] ts.
