@@ -1,6 +1,6 @@
 From Equations Require Import Equations.
 From HB Require Import structures.
-From mathcomp Require Import all_ssreflect.
+From mathcomp Require Import all_boot all_order.
 Set Implicit Arguments.
 (* Unset Strict Implicit. *)
 Unset Printing Implicit Defensive.
@@ -529,7 +529,7 @@ Section Template.
   + by move=> yxn xyn; move: (cmp_total x y); rewrite xyn yxn.
   Qed.
 
-  Lemma choose_graph_idem : idempotent choose_graph.
+  Lemma choose_graph_idem : idempotent_op choose_graph.
   Proof.
   by move=> x; rewrite /choose_graph cmp_refl.
   Qed.

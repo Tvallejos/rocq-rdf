@@ -1,5 +1,5 @@
 From HB Require Import structures.
-From mathcomp Require Import all_ssreflect.
+From mathcomp Require Import all_boot all_order.
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
@@ -394,13 +394,12 @@ Proof.
   have s0 := f s1.
   have [i [j [ijle [jsize [ntheq]]]]]:= p s0.
   exists (nth s1 s i). apply mem_nth. rewrite size_map in jsize.
-  apply: ltn_trans ijle jsize.
+  by apply: ltn_trans ijle jsize.
   exists (nth s1 s j). apply /andP; split.
   apply uniq_neq_nth=> //.
   by rewrite size_map in jsize.
   by rewrite size_map in jsize; apply: ltn_trans ijle jsize.
-  rewrite Order.NatOrder.ltn_def in ijle.
-  by move/andP : ijle=> [].
+  by rewrite neq_ltn ijle orbT.
   by apply mem_nth; rewrite size_map in jsize.
   erewrite <- nth_map.
   suffices <-: nth s0 [seq f i | i <- s] j = f (nth s1 s j).
