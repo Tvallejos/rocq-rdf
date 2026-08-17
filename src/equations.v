@@ -1780,12 +1780,14 @@ Definition distinguish_ (g : seq (triple I B L)) (hm : hash_map) : seq (triple I
     (n : nat):
     forall hm : hash_map,
     is_fine (gen_partition hm) = false ->
-    hash_map_for g hm ->
+    (* hash_map_for g hm -> *)
     M hm < n ->
-    uniq (bnodes_hm hm) ->
+    (* uniq (bnodes_hm hm) -> *)
     perm_eq (bnodes_hm hm) (get_bts g) -> distinguish g hm == distinguish (relabeling_seq_triple mu g) (map1 mu hm).
     Proof.
-      elim: n => [//| n' IHn hm] hfine mem_eq_bs measure ubs_hm ghm_f.
+      elim: n => [//| n' IHn hm] hfine measure ghm_f.
+      have mem_eq_bs := perm_mem ghm_f.
+      have ubs_hm : uniq (bnodes_hm hm) by rewrite (perm_uniq ghm_f) uniq_get_bts.
       have huniq : uniq (bnodes_hm (map1 mu hm)).
          rewrite map1_bnodesC; apply/in_map_injP=> //.
          move=> b1 b2; rewrite !mem_eq_bs; exact: mu_inj.
@@ -2046,12 +2048,9 @@ Definition distinguish_ (g : seq (triple I B L)) (hm : hash_map) : seq (triple I
           have /(distinguish_perm_hm _ _ _ _) -> // := peq_cr_post_rel.
           apply /eqP.
           apply IHn=> //.
-          - apply color_good_hm.
-            by apply good_mark; last by apply in_part_in_bnodes.
           - eapply Order.POrderTheory.le_lt_trans.
             * by apply colorP=> //; apply good_mark=> //; apply in_part_in_bnodes.
             by apply: (Order.POrderTheory.lt_le_trans (markP _ hm _ ubs_hm hb) measure); by rewrite hfine.
-        + by apply: color_ubs; apply: mark_ubs=> //; exact: in_part_in_bnodes.
         + by apply still_good=> //; rewrite hfine //.
         + by apply uniq_perm=> //; apply uniq_get_bts.
         + by apply uniq_perm=> //; apply uniq_get_bts.
@@ -2099,10 +2098,7 @@ Definition distinguish_ (g : seq (triple I B L)) (hm : hash_map) : seq (triple I
         * by apply color_ubs; apply init_hash_ubs.
         * by apply uniq_get_bts.
         by apply color_hm_for.
-      have : uniq (bnodes_hm col_g).
-        by apply color_ubs; apply init_hash_ubs.
       have : M col_g < S (M col_g) by apply ltnSn.
-      have : hash_map_for g col_g  by apply color_good_hm; apply good_init.
       move: col_g (M col_g).+1 {peq_col} finePn.
       move=> hm n; move: n hm=> n.
       move=> {piso peq col_h_ubs }.
