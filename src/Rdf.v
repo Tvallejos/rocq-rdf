@@ -1047,6 +1047,10 @@ Section Rdf.
         by apply: perm_trans perm_relab _; rewrite relabeling_triple_map_comp map_id_in //.
       Qed.
 
+      (* from every pair of pre isomorphisms from G to H and pre-iso from H to G *)
+      (* a new pre iso rho from H to G can be built such that *)
+      (* rho coincides with the inverse in bnodes of H and *)
+      (* only bnodes of H fall into the bnodes of G under the rho *)
       Lemma effective_iso_outside_eq_inv G H (uG : uniq G):
           forall mu,
             is_pre_iso_ts G H mu ->
@@ -1082,6 +1086,10 @@ Section Rdf.
           + by rewrite not_peq.
       Qed.
 
+      (* "extends" previous lemma to isomorphisms *)
+      (* isomorphisms from G to H can be inverted such that *)
+      (* there is an iso from H to G and *)
+      (* only bnodes of H fall into the bnodes of G under rho *)
       Lemma effective_iso_outside_domain G H (uG : uniq G) :
         effective_iso_ts G H ->
           exists rho : B -> B,
@@ -1097,7 +1105,7 @@ Section Rdf.
                                  {in (get_bts H), nu =1 rho}.
           suffices /perm_eq_relab_uniq_ts step : perm_eq (relabeling_seq_triple rho H) G.
             move : step=> /(_ uG) [peq_rho urho].
-            by exists rho; split=> //; apply/and3P; rewrite piso_rho peq_rho urho.
+            exists rho; split=> //; by apply/and3P; rewrite piso_rho peq_rho urho.
           move: perm_relab; rewrite perm_sym=> /(perm_map (relabeling_triple rho))=> perm_relab.
           apply: perm_trans perm_relab _; rewrite relabeling_triple_map_comp map_id_in //.
           move: eq=> /map_comp_in_id_ts mu_inv.

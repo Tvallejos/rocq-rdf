@@ -263,7 +263,7 @@ Proof. by rewrite /eq_hash count_map. Qed.
 
 Lemma mult1_filter (n m : nat) (s: seq nat):
     n != m -> mult1 s m = mult1 (filter (predC1 n) s) m.
-  Proof. by rewrite /mult1=> /(@count_mem_filter _ _ s) ->. Qed.
+  Proof. by rewrite /mult1=> /(count_mem_filter s) ->. Qed.
 (* 
 Lemma count_mult1_opt (hd : B * nat) (tl : seq (B * nat)):
     let ps := (partitionate hd.2 (hd :: tl)).2 : seq (B * nat) in
@@ -535,7 +535,7 @@ Section Template.
   Qed.
 
   (* A default graph *)
-  Definition g0 : seq (triple I B L) := [::].
+  Definition g0 : seq (triple I B L) := nil.
 
   (* Determines a choice of default graph can *)
   Hypothesis can_extremum : forall (x : seq (triple I B L)), cmp g0 x.
@@ -550,9 +550,9 @@ Section Template.
       choose_graphC
       can_lid.
 
-  Local Notation hash_map := (@hash_map B).
-  Local Notation part := (@part B).
-  Local Notation partition := (@partition B).
+  Local Notation hash_map := (hash_map B).
+  Local Notation part := (part B).
+  Local Notation partition := (partition B).
 
   Arguments eq_hash {B} _ _.
   Arguments eq_bnode {B} _ _.
@@ -780,15 +780,14 @@ Lemma fun_of_hash_perm (hm p : hash_map) :
     by rewrite map_inj_in_uniq=> //; apply inj_get_bts_inj_ts.
     Qed.
 
+  (* Local Notation hash_map := (hash_map B). *)
 
   (* Initial hash map from a graph *)
   Variable (init_hash : seq (triple I B L) -> hash_map).
 
   (* init_hash g has the same bnodes as the graph g *)
-  (* TODO: use hash_map_for *)
   Hypothesis good_init :
     forall (g : seq (triple I B L)), hash_map_for g (init_hash g).
-  (* TODO: remove bnodes_hm (init_hash g) =i get_bts g. *)
 
   (* the relabeling under injective functions "commutes" with init_hash modulo permutation *)
   Hypothesis init_hash_inj_rel : forall (g : seq (triple I B L)) (mu: B -> B),
@@ -800,29 +799,12 @@ Lemma fun_of_hash_perm (hm p : hash_map) :
   (* the result of init_hash has uniq blank nodes *)
   Hypothesis init_hash_ubs : forall (g : seq (triple I B L)), uniq (bnodes_hm (init_hash g)).
 
-  (* TODO : remove Lemma init_hash_inv : forall (g : seq (triple I B L)), *)
-  (*   good_hash_map_for g (init_hash g). *)
-  (* Proof. *)
-  (* move=> g mu mu_inj x xin. *)
-  (* apply shift_hm. *)
-  (* by rewrite good_init. *)
-  (* move=> {}x y {}xin yin. *)
-  (* by apply mu_inj; rewrite -good_init. *)
-  (* Qed. *)
-
-  (* init hash yeilds a good hash for its input *)
-  (* TODO remove *)
-    (* Hypothesis init_hash_inv : forall (g : seq (triple I B L)), *)
-    (*     good_hash_map_for g (init_hash g). *)
-
   (* Pick a part p from a failed attempt at computing a fine partition from the input hashmap hm. Expected:
      - (map fst p) is included in (map fst hm)
      - elements of p have the same hash
      - p is non empty and non singleton *)
   Variable choose_part : hash_map -> part.
   (* all nodes in choose_part hm lead to bnodes of hm. NOTE that the assumption does not prevent choose_part from duplicating elements. *)
-  (* Variable choose_hash : hash_map -> nat. *)
-  (* TODO : relate choose_part and choose_hash *)
   (* choose_part selection is based on the hashes of the input *)
   
   Hypothesis choose_part_order :
@@ -854,7 +836,7 @@ Lemma fun_of_hash_perm (hm p : hash_map) :
   Qed.
 
   (* update a hashmap from an input graph, without increasing the measure *)
-  Variables (color color_refine : seq (triple I B L) -> hash_map -> hash_map).
+  Variables (color : seq (triple I B L) -> hash_map -> hash_map).
 
   (* Hypothesis for color *)
 
@@ -863,11 +845,6 @@ Lemma fun_of_hash_perm (hm p : hash_map) :
     forall (g : seq (triple I B L)) hm,
       hash_map_for g hm ->
       hash_map_for g (color g hm).
-
-  (* coloring a hashmap preserves beign a good hash_map for *)
-  (* TODO remove *)
-  (* Hypothesis color_inv : forall (g : seq (triple I B L)) (hm : hash_map), *)
-  (*     good_hash_map_for g hm -> good_hash_map_for g (color g hm). *)
 
   (* the coloring of a relabeling is the relabeling of a coloring *)
   Hypothesis color_post_relabeling : forall (g : seq (triple I B L)) (mu : B -> B) (hm : hash_map),
@@ -882,51 +859,64 @@ Lemma fun_of_hash_perm (hm p : hash_map) :
   (* hashmaps equal up to permutation yield hashmaps equal up to permutation under color of the same graph *)
   (* TODO invert order of perm_eq hyp of hashes *)
   Hypothesis color_perm_hm : forall (hm p : hash_map),
-      perm_eq p hm -> forall (g : seq (triple I B L)), perm_eq (color g hm) (color g p).
+      perm_eq p hm -> forall (g : seq (triple I B L)), 
+      perm_eq (color g hm) (color g p).
 
   (* color preserves uniqueness of blank nodes *)
   Hypothesis color_ubs : forall (hm: hash_map) (g : seq (triple I B L)), (uniq (bnodes_hm hm)) -> uniq (bnodes_hm (color g hm)).
 
 
-  (* Hypothesis for color_refine *)
-  (* Same for color_refine *)
-  Hypothesis color_refine_good_hm :
-    forall (g : seq (triple I B L)) hm,
-      hash_map_for g hm ->
-      hash_map_for g (color_refine g hm).
-
-  (* TODO remove *)
-  (* Hypothesis color_refine_inv : forall (g : seq (triple I B L)) (hm : hash_map), *)
-  (*     good_hash_map_for g hm -> good_hash_map_for g (color_refine g hm). *)
-
-  Hypothesis color_refine_post_relabeling : forall (g : seq (triple I B L)) (hm : hash_map) (mu : B -> B),
+  Lemma color_post_relabeling2 : forall (g : seq (triple I B L)) (hm : hash_map) (mu : B -> B),
            {in (get_bts g)&, injective mu} ->
            {in (bnodes_hm hm)&, injective mu} ->
-           perm_eq (color_refine (relabeling_seq_triple mu g) (map1 mu hm))
-                   (map1 mu (color_refine g hm)).
+           perm_eq (color (relabeling_seq_triple mu g) (map1 mu hm))
+                   (map1 mu (color g hm)).
+  Proof. move=> g h mu; apply color_post_relabeling. Qed.
 
-  Hypothesis color_refine_perm_graph : forall (g h: seq (triple I B L)) (hm : hash_map), perm_eq g h -> perm_eq (color_refine g hm) (color_refine h hm).
-
-  Hypothesis color_refine_perm_hm : forall (g : seq (triple I B L)) (hm p: hash_map), perm_eq hm p -> perm_eq (color_refine g hm) (color_refine g p).
-
-  Hypothesis color_refine_ubs : forall (hm: hash_map) (g : seq (triple I B L)), (uniq (bnodes_hm hm)) -> uniq (bnodes_hm (color_refine g hm)).
+  Lemma color_perm_hm2 : forall (g : seq (triple I B L)) (hm p: hash_map), 
+    perm_eq hm p -> perm_eq (color g hm) (color g p).
+  Proof. by move=> g hm p peq; apply color_perm_hm; rewrite perm_sym. Qed.
+  
+  Lemma color_of_isoPP (g h : seq (triple I B L)):
+    forall (mu: B -> B),
+    is_effective_iso_ts g h mu->
+    forall hmg hmh, 
+    hash_map_for g hmg ->
+    perm_eq (map1 mu hmg) hmh ->
+    perm_eq (map1 mu (color g hmg)) (color h hmh).
+  Proof.
+  move=> mu /and3P[piso urel peq] hmg hmh hmfg /color_perm_hm/(_ h) peqhm.
+  have peq_col: perm_eq (color (relabeling_seq_triple mu g) (map1 mu hmg)) (color h hmh). 
+    by rewrite perm_sym; apply (perm_trans peqhm) ; apply color_perm_graph; rewrite perm_sym.
+  apply: (perm_trans _ peq_col).
+  have mu_inj := (is_pre_iso_ts_inj piso). 
+  rewrite perm_sym; apply color_post_relabeling=> //.
+  by move=> b1 b2; rewrite !hmfg; apply mu_inj.
+  Qed.
 
   Lemma color_of_iso (g h : seq (triple I B L)):
     forall (mu: B -> B),
     is_effective_iso_ts g h mu->
     perm_eq (map1 mu (color g (init_hash g))) (color h (init_hash h)).
   Proof.
-  move=> mu /and3P[piso urel peq].
-  have peq_col: perm_eq (color (relabeling_seq_triple mu g) (init_hash (relabeling_seq_triple mu g))) (color h (init_hash h)).
-    have /color_perm_hm/(_ h) step : perm_eq (init_hash (relabeling_seq_triple mu g)) (init_hash h).
-      by apply init_hash_perm_graph.
-    by rewrite perm_sym; apply (perm_trans step) ; apply color_perm_graph; rewrite perm_sym.
-  apply: (perm_trans _ peq_col).
-  have step : perm_eq (color (relabeling_seq_triple mu g) (init_hash (relabeling_seq_triple mu g))) (color (relabeling_seq_triple mu g) (map1 mu (init_hash g))).
-    by apply color_perm_hm; apply init_hash_inj_rel; apply (is_pre_iso_ts_inj piso).
-  have mu_inj := (is_pre_iso_ts_inj piso).
-  rewrite perm_sym. apply: (perm_trans step). apply color_post_relabeling=> //.
-  by move=> b1 b2; rewrite !good_init; apply mu_inj.
+  move=> mu iso; apply: color_of_isoPP=> //; case/and3P: iso=> piso _ peq.
+  apply: (perm_trans _ (init_hash_perm_graph _ _ peq)).
+  by apply: init_hash_inj_rel; apply: (is_pre_iso_ts_inj piso).
+  Qed.
+
+  Lemma iso_color_finePP :
+    forall (g h : seq (triple I B L)) mu,
+      is_effective_iso_ts g h mu ->
+      forall hmg hmh, 
+      hash_map_for g hmg ->
+      perm_eq (map1 mu hmg) hmh ->
+      is_fine (gen_partition (color g hmg))
+      = is_fine (gen_partition (color h hmh)).
+  Proof.
+  move=> g h mu /and3P[piso urel peq] hmg hmh hmfg hmfh.
+  apply: perm_hash_eq_fine.
+  rewrite -(hashes_of_map1 (color g hmg) mu).
+  by apply perm_map; apply color_of_isoPP=> //; apply /and3P;split.
   Qed.
 
   Lemma iso_color_fine :
@@ -935,11 +925,14 @@ Lemma fun_of_hash_perm (hm p : hash_map) :
       is_fine (gen_partition (color g (init_hash g)))
       = is_fine (gen_partition (color h (init_hash h))).
   Proof.
-  move=> g h [mu /and3P[piso urel peq]].
-  apply: perm_hash_eq_fine.
-  rewrite -(hashes_of_map1 (color g (init_hash g)) mu).
-  by apply perm_map; apply color_of_iso; apply /and3P;split.
+  move=> g h [mu iso].
+  apply: (iso_color_finePP _ _ iso).
+  - apply: good_init.
+  case/and3P: iso=> [piso _ peq].
+  apply: (perm_trans _ (init_hash_perm_graph _ _ peq)).
+  by apply: init_hash_inj_rel; apply: (is_pre_iso_ts_inj piso).
   Qed.
+  
 
   (* Marks a bnode in a hashmap*)
   Variable (mark : B -> hash_map -> hash_map).
@@ -950,15 +943,6 @@ Lemma fun_of_hash_perm (hm p : hash_map) :
       hash_map_for g hm ->
       forall b, b \in bnodes_hm hm ->
                  hash_map_for g (mark b hm).
-
-  (* TODO: remove
-(* Hypothesis mark_inv : *) *)
-  (*   forall (g : seq (triple I B L)) (hm : hash_map) (b : B), *)
-  (*   get_bts g =i bnodes_hm hm -> *)
-  (*     b \in (get_bts g) -> *)
-  (*      uniq (bnodes_hm hm) -> *)
-  (*       good_hash_map_for g hm -> *)
-  (*         good_hash_map_for g (mark b hm). *)
 
   (* marking the mapping of an injective function is the mapping of the marking *)
   Hypothesis mark_post_rel: forall (b : B) (hm : hash_map) (mu : B -> B),
@@ -972,16 +956,10 @@ Lemma fun_of_hash_perm (hm p : hash_map) :
   perm_eq hm p -> perm_eq (mark b hm) (mark b p).
 
   (* Marking a hashmap with one of its bnodes does not change its bnodes (but only the hashes)*)
-  (* TODO : use hash_map_for *)
   Hypothesis mark_ubs : forall (hm: hash_map),
       (uniq (bnodes_hm hm))
       -> forall (b : B), b \in (bnodes_hm hm)
       -> uniq (bnodes_hm (mark b hm)).
-
-  (* TODO : to be simplified into
-    Hypothesis good_mark : forall (hm : hash_map),
-     forall b, b \in bnodes_hm hm -> bnodes_hm (mark b hm) =i bnodes_hm hm.
-   *)
 
   (* Measure on hash_map*)
   Variable (M : hash_map -> nat).
@@ -989,15 +967,15 @@ Lemma fun_of_hash_perm (hm p : hash_map) :
   (* Mark decreases the measure *)
   Hypothesis markP :
     forall (bn : B * nat) (hm : hash_map),
-      (* TODO IMPORTANT : add this hypothesis *)
-       ~~ is_fine (gen_partition hm) -> 
+       ~~ is_fine (gen_partition hm) ->
         uniq (bnodes_hm hm) -> 
       bn \in choose_part hm -> M (mark bn.1 hm) < M hm.
 
   (* color_refine does not increase the measure *)
-  Hypothesis color_refineP :
+  Hypothesis colorP :
     forall (g : seq (triple I B L)) (hm : hash_map),
-      M (color_refine g hm) <= M hm.
+      hash_map_for g hm ->
+        M (color g hm) <= M hm.
 
   Lemma color_hm_for (g : seq (triple I B L)) : hash_map_for g (color g (init_hash g)).
   Proof. by apply color_good_hm; apply good_init. Qed.
@@ -1064,68 +1042,71 @@ Lemma fun_of_hash_perm (hm p : hash_map) :
     - by [].
     - autorewrite with foldl_In; apply H.
     Qed.
-  
+
+    Definition template (g : seq (triple I B L)) (hm : hash_map) 
+      (* (f : seq (triple I B L) -> hash_map -> seq (triple I B L))  fails in defining distinguish__ *)
+      dflt
+      :=
+      let hm' := color g hm in
+      let iso_g := if is_fine (gen_partition hm')
+                   then (sort le_triple (relabeling_seq_triple (fun_of_hash_map hm') g))
+                   else dflt in
+      iso_g.
+
   Equations? distinguish__
     (g : seq (triple I B L))
       (hm : hash_map)
       (gbot : seq (triple I B L))
       : seq (triple I B L) by wf (M hm) lt :=
     distinguish__ g hm gbot :=
-    @ifb _ ((is_fine (gen_partition hm)) || ~~ (uniq (bnodes_hm hm))) (fun _ => nil) (fun _ =>
+    @ifb _ ([|| is_fine (gen_partition hm), ~~ (uniq (bnodes_hm hm)) | ~~ (perm_eq (bnodes_hm hm) (get_bts g))]) (fun _ => nil) (fun _ =>
     let p := choose_part hm in
     let d := fun bn inP =>
-               let hm' := color_refine g (mark bn.1 hm) in
-               let fine := is_fine (gen_partition hm') in
-               if fine then
-                 let candidate := sort le_triple (relabeling_seq_triple (fun_of_hash_map hm') g) in
-                 candidate
-               else (distinguish__ g hm' gbot) in
+               let hm' := (mark bn.1 hm) in
+               template g hm' (distinguish__ g (color g hm') gbot) in
     let f := fun gbot bn inP  =>
                let candidate := d bn inP in
                if cmp gbot candidate then candidate else gbot in
-    foldl_In p f gbot).
+    foldl_In p f gbot
+    )
+    .
     Proof.
-    apply /ssrnat.ltP; apply (leq_ltn_trans (color_refineP _ _)).
-    suff [e1 e2] : ~~ is_fine (gen_partition hm) /\ uniq (bnodes_hm hm).
-      by exact: (markP (s, n)).
-    by apply/andP; rewrite -[_ && _]negbK negb_and negbK e. (* BUG? Search _ negb orb. *)
+    apply /ssrnat.ltP. 
+    suff [e1 e2 e3] : [/\ ~~ is_fine (gen_partition hm), uniq (bnodes_hm hm) & (perm_eq (bnodes_hm hm) (get_bts g))].
+      have mP := (markP (s, n) _ e1 e2).
+      have prInP : (s,n) \in p by [].
+      apply: (leq_ltn_trans (colorP _) (mP prInP)).
+      apply: (good_mark (perm_mem e3)).
+      by have /(map_f fst):= in_part_in_hm _ _ prInP.
+   by apply/and3P; rewrite -[_ && _]negbK negb_and negb_and negbK e. (* BUG? Search _ negb orb. *)
     Qed.
 
-
-Definition distinguish (g : seq (triple I B L)) (hm : hash_map) : seq (triple I B L) :=
+ Definition distinguish (g : seq (triple I B L)) (hm : hash_map) : seq (triple I B L) :=
       distinguish__ g hm g0.
+
+ Definition canonicalize (g : seq (triple I B L)) (hm : hash_map) (bn : B * nat) : seq (triple I B L):= 
+  let hm' := (mark bn.1 hm) in
+  template g hm' (distinguish g (color g hm')).
 
 Definition distinguish_ (g : seq (triple I B L)) (hm : hash_map) : seq (triple I B L) :=
       let p := choose_part hm in
-	    let d := fun bn =>
-	               let hm' := color_refine g (mark bn.1 hm) in
-	               if is_fine (gen_partition hm') then
-	                 let candidate := sort le_triple (relabeling_seq_triple (fun_of_hash_map hm') g) in
-	                 candidate
-	               else (distinguish g hm') in
       let f := fun gbot bn  =>
-                 let candidate := d bn in
+                 let candidate := canonicalize g hm bn in
                  if cmp gbot candidate then candidate else gbot in
       foldl f g0 p.
 
     Lemma eq_distinguish (g : seq (triple I B L)) (hm : hash_map) :
-    ~~ (is_fine (gen_partition hm)) -> (uniq (bnodes_hm hm)) -> distinguish g hm = distinguish_ g hm.
+    ~~ (is_fine (gen_partition hm)) -> (uniq (bnodes_hm hm)) -> (perm_eq (bnodes_hm hm) (get_bts g)) 
+    -> distinguish g hm = distinguish_ g hm.
     Proof.
-    move=> e1 e2.
+    move=> e1 e2 e3.
     rewrite /distinguish.
     simp distinguish__.
-    rewrite /ifb e2 (negPf e1) /=.
+    rewrite /ifb e2 e3 (negPf e1) /=.
+    rewrite /distinguish_.
     rewrite /distinguish_ -foldl_foldl_eq /=.
     by autorewrite with distinguish__.
     Qed.
-
-    Definition canonicalize (g : seq (triple I B L)) (hm : hash_map)
-      (bn : (B * nat)) :=
-	      let hm' := color_refine g (mark bn.1 hm) in
-	      if is_fine (gen_partition hm') then
-	        let candidate := sort le_triple (relabeling_seq_triple (fun_of_hash_map hm') g) in (* TODO simplfy let *)
-	        candidate
-	      else (distinguish g hm').
 
     Definition distinguish_fold (g : seq (triple I B L)) (hm : hash_map) : seq (triple I B L) :=
       let p := choose_part hm in
@@ -1136,19 +1117,12 @@ Definition distinguish_ (g : seq (triple I B L)) (hm : hash_map) : seq (triple I
     Proof. by elim: s z=> [//| a tl IHl] /= z; rewrite -IHl. Qed.
 
     Lemma distinguish_fold_map (g : seq (triple I B L)) (hm : hash_map) :
-    ~~ (is_fine (gen_partition hm)) -> (uniq (bnodes_hm hm)) -> distinguish g hm = distinguish_fold g hm.
+    ~~ (is_fine (gen_partition hm)) -> (uniq (bnodes_hm hm)) -> (perm_eq (bnodes_hm hm) (get_bts g)) 
+    -> distinguish g hm = distinguish_fold g hm.
     Proof. 
-    move=> e1 e2. 
+    move=> e1 e2 e3. 
     by rewrite /distinguish_fold eq_distinguish /distinguish_ // -fold_map. 
     Qed.
-
-    Definition template (g : seq (triple I B L)) :=
-      let hm := init_hash g in
-      let hm' := color g hm in
-      let iso_g := if is_fine (gen_partition hm')
-                   then (sort le_triple (relabeling_seq_triple (fun_of_hash_map hm') g))
-                   else distinguish g hm' in
-      iso_g.
 
     Lemma distinguish_choice_default (gs: seq (seq (triple I B L))) (x0: seq (triple I B L)) :
       let ans := foldl choose_graph x0 gs in
@@ -1163,48 +1137,61 @@ Definition distinguish_ (g : seq (triple I B L)) (hm : hash_map) : seq (triple I
     Qed.
 
     Lemma distinguish_choice (g : seq (triple I B L)) (hm: hash_map) :
-    ~~ (is_fine (gen_partition hm)) -> (uniq (bnodes_hm hm)) -> 
+    ~~ (is_fine (gen_partition hm)) -> (uniq (bnodes_hm hm)) -> (perm_eq (bnodes_hm hm) (get_bts g)) ->
     distinguish g hm = g0 \/ distinguish g hm \in (map (canonicalize g hm) (choose_part hm)).
     Proof. 
-    move=> e1 e2. 
+    move=> e1 e2 e3. 
     by rewrite distinguish_fold_map //; apply distinguish_choice_default. 
     Qed.
 
     Lemma uniq_distinguish (g : seq (triple I B L)) (ug: uniq g) hm :
     ~~ (is_fine (gen_partition hm)) -> (uniq (bnodes_hm hm)) ->
-    hash_map_for g hm ->
+    (perm_eq (bnodes_hm hm) (get_bts g)) ->
     (negb \o (is_fine (B:=B))) (gen_partition hm) -> uniq (distinguish g hm).
     Proof.
-    move=> e1 e2.
+    move=> e1 e2 e3.
     have : M hm < S (M hm) by apply ltnSn.
-    move: hm e1 e2 (M hm).+1.
-    move=> hm e1 e2 n. move: n hm e1 e2 => n.
-    elim: n => [//| n IHn hm e1 e2].
-    case: (distinguish_choice g hm e1 e2); first by move=> ->.
+    move: hm e1 e2 e3 (M hm).+1.
+    move=> hm e1 e2 e3 n. move: n hm e1 e2 e3 => n.
+    elim: n => [//| n IHn hm e1 e2 eqbns].
+    case: (distinguish_choice g hm e1 e2 eqbns); first by move=> ->.
     move=> /mapP/= [bn pin ->].
-    move=> MH eqbns finePn.
-    rewrite /canonicalize.
+    move=> MH finePn.
+    (* move=> MH eqbns finePn. *)
+    rewrite /canonicalize/template.
     case: ifP=> [fine|finePn1].
-    -  rewrite sort_uniq; apply uniq_label_is_fine=> //; apply color_refine_good_hm.
-       by apply (good_mark eqbns); apply in_part_in_bnodes.
-    - apply IHn.
-      + by rewrite finePn1.
-      + apply: color_refine_ubs; apply: mark_ubs=> //.
+    -  rewrite sort_uniq; apply uniq_label_is_fine=> //; apply color_good_hm.
+       by apply (good_mark (perm_mem eqbns)); apply in_part_in_bnodes.
+    - have ubn : uniq (bnodes_hm (color g (mark bn.1 hm))). 
+        apply: color_ubs; apply: mark_ubs=> //.
         exact: in_part_in_bnodes.
-      + apply: Order.POrderTheory.le_lt_trans (color_refineP _ _) _.
+      have hmf_mark : hash_map_for g (mark bn.1 hm).
+        apply good_mark=> //. 
+        + by apply (perm_mem eqbns).
+        by apply in_part_in_bnodes.
+      apply IHn=> //.
+      + by rewrite finePn1.
+      + apply uniq_perm=> //; first by apply uniq_get_bts.
+        by apply color_good_hm. 
+      + refine (Order.POrderTheory.le_lt_trans (colorP hmf_mark) _).
         by apply: Order.POrderTheory.lt_le_trans (markP _ _ _ _ _) MH.
-      + by apply color_refine_good_hm; apply good_mark=> //; apply in_part_in_bnodes.
       + by move=> /=; rewrite finePn1.
     Qed.
 
-    Lemma uniq_template (g : seq (triple I B L)) (ug: uniq g) : uniq (template g).
+    Definition isocanonicalize (g : seq (triple I B L)) :=
+      template g (init_hash g) (distinguish g (color g (init_hash g))).
+
+    Lemma uniq_template (g : seq (triple I B L)) (ug: uniq g) : uniq (isocanonicalize g).
     Proof.
-    rewrite /template; case: ifP=> H.
+    rewrite /isocanonicalize/template; case: ifP=> H.
       rewrite sort_uniq; apply uniq_label_is_fine=> //.
       by move=> h; rewrite color_good_hm.
     apply uniq_distinguish=> //= ; rewrite ?H //. 
     - by apply: color_ubs; apply: init_hash_ubs.
-    - by apply color_good_hm.
+    - apply uniq_perm=> //. 
+        + by apply color_ubs; apply init_hash_ubs. 
+        + by apply uniq_get_bts.
+        by apply color_good_hm. 
     Qed.
 
     Lemma mem_nilP (T : eqType) (s : seq T) : s =i [::] <-> s = [::].
@@ -1297,9 +1284,9 @@ Definition distinguish_ (g : seq (triple I B L)) (hm : hash_map) : seq (triple I
     by rewrite -contr in_cons eqxx.
     Qed.
 
-    Lemma template_nil_nil : template [::] = [::].
+    Lemma template_nil_nil : isocanonicalize [::] = [::].
     Proof.
-    rewrite /template/=; case: ifP; first by [].
+    rewrite /isocanonicalize/template/=; case: ifP; first by [].
     by rewrite init_hash_nil color_nil_nil.
     Qed.
 
@@ -1337,7 +1324,6 @@ Definition distinguish_ (g : seq (triple I B L)) (hm : hash_map) : seq (triple I
       by rewrite eq_fold in_cons=> ->; rewrite orbT.
     by move=> y yin; apply cmp_in; rewrite in_cons yin orbT.
     Qed.
-
         (* This is where we use the fact that can is nil *)
     Lemma nil_is_nil (g : seq (triple I B L)) (hm : hash_map):
       hash_map_for g hm ->
@@ -1352,17 +1338,34 @@ Definition distinguish_ (g : seq (triple I B L)) (hm : hash_map) : seq (triple I
     rewrite distinguish_fold_map //.
     move=> /(foldl_can_in_choose _ _)/orP[]; first by move=> ?; rewrite can_extremum //.
     + by rewrite map_nil_is_nil choose_from_not_fine.
-    rewrite /canonicalize; move=> /mapP[/= b bin].
+    rewrite /canonicalize/template; move=> /mapP[/= b bin].
     case: ifP=> [_|].
     + have ->: g0 = sort le_triple g0 by [].
       move=> /rdf_leP; rewrite perm_sym.
       by move=> /perm_nilP/eqP; rewrite map_nil_is_nil=> /eqP->.
     + move=> H /eqP; rewrite eq_sym=> /eqP.
       apply IHn=> //; last by rewrite H.
-      + apply: Order.POrderTheory.le_lt_trans (color_refineP _ _) _.
-       by apply: Order.POrderTheory.lt_le_trans (markP _ _ _ _ _) measure.
-      + by apply color_refine_good_hm; apply good_mark=> //; apply in_part_in_bnodes.
-      + apply: color_refine_ubs; apply: mark_ubs=> //; exact: in_part_in_bnodes.
+      + apply: Order.POrderTheory.le_lt_trans (colorP _) _.
+        * by apply good_mark=> //; apply map_f; apply in_part_in_hm.
+        by apply: Order.POrderTheory.lt_le_trans (markP _ _ _ _ _) measure.
+      + by apply color_good_hm; apply good_mark=> //; apply in_part_in_bnodes.
+      + apply: color_ubs; apply: mark_ubs=> //; exact: in_part_in_bnodes.
+      + apply uniq_perm=> //; apply uniq_get_bts.
+    Qed.
+    Lemma still_good (g : seq (triple I B L)) (hm : hash_map):
+      perm_eq (bnodes_hm hm) (get_bts g) ->  
+      forall (finePn : ~~ is_fine (gen_partition hm))
+      (bn : B * nat)
+      (inp : bn  \in choose_part hm),
+     perm_eq (bnodes_hm (color g (mark bn.1 hm))) (get_bts g).
+    Proof.
+    move=> peq finePn bn pin.
+    apply uniq_perm.
+    + apply: color_ubs; apply mark_ubs; first by rewrite (perm_uniq peq) uniq_get_bts. 
+      by apply in_part_in_bnodes.
+    + apply uniq_get_bts.
+    + apply color_good_hm; apply good_mark. by apply perm_mem. 
+      by apply in_part_in_bnodes.
     Qed.
 
     Lemma distinguish_piso (g : seq (triple I B L)) (ug: uniq g):
@@ -1375,34 +1378,40 @@ Definition distinguish_ (g : seq (triple I B L)) (hm : hash_map) : seq (triple I
     have : uniq (bnodes_hm hm).
       by apply: color_ubs; apply: init_hash_ubs.
     have : M hm < S (M hm) by apply ltnSn.
-    have : hash_map_for g hm by apply color_good_hm; apply good_init.
+    have : perm_eq (bnodes_hm hm) (get_bts g). 
+      apply uniq_perm=> //. 
+      + by apply color_ubs; apply init_hash_ubs.
+      + by apply uniq_get_bts.
+      by apply color_good_hm. 
+    (* have : hash_map_for g hm by apply color_good_hm; apply good_init. *)
     move: hm (M hm).+1.
     move=> hm n; move: n hm=> n.
     elim: n => [//| n IHn hm' ghm hmM] uniqP finePn.
     move: (distinguish_choice g hm')=> //= [] //.
-    + move=> H; rewrite H; move/(nil_is_nil ghm uniqP finePn) : H ->.
+    + move=> H; rewrite H; move/(nil_is_nil (perm_mem ghm) uniqP finePn) : H ->.
       by exists id; split; first by rewrite relabeling_seq_triple_id.
     + move=> /mapP/=[bn inp ->].
-      case_eq  (is_fine (gen_partition (color_refine g (mark bn.1 hm'))))=> H.
-      - exists (fun_of_hash_map (color_refine g (mark bn.1 hm'))).
-        rewrite /canonicalize; split=> //; rewrite H //.
+      case_eq  (is_fine (gen_partition (color g (mark bn.1 hm'))))=> H.
+      - exists (fun_of_hash_map (color g (mark bn.1 hm'))).
+        rewrite /canonicalize/template; split=> //; rewrite H //.
         apply piso_sort; apply piso_funof; last by apply H.
-        apply color_refine_good_hm; apply good_mark=> //.
+        apply color_good_hm; apply good_mark=> //; first by apply perm_mem.
         by apply in_part_in_bnodes.
-      - rewrite /canonicalize H; apply IHn=> //; last by rewrite H.
-        + apply color_refine_good_hm; apply good_mark=> //.
+      - rewrite /canonicalize/template H; apply IHn=> //; last by rewrite H.
+        by apply still_good.
+        + eapply Order.POrderTheory.le_lt_trans. 
+          * apply colorP; apply good_mark=> //; first by apply perm_mem.
           by apply in_part_in_bnodes.
-        + eapply Order.POrderTheory.le_lt_trans; first by apply color_refineP.
           exact: (Order.POrderTheory.lt_le_trans (markP _ _ finePn uniqP inp) hmM).
-        + apply: color_refine_ubs; apply: mark_ubs=> //; exact: in_part_in_bnodes.
+        + apply: color_ubs; apply: mark_ubs=> //; exact: in_part_in_bnodes.
     Qed.
 
     Lemma preiso_out_template (g : seq (triple I B L)) (ug : uniq g) :
-      exists mu, (template g) = sort le_triple (relabeling_seq_triple mu g)
-                 /\ is_pre_iso_ts g (template g) mu.
+      exists mu, (isocanonicalize g) = sort le_triple (relabeling_seq_triple mu g)
+                 /\ is_pre_iso_ts g (isocanonicalize g) mu.
     Proof.
-    move/eqP : (eq_refl (template g)).
-    rewrite {2}/template.
+    move/eqP : (eq_refl (isocanonicalize g)).
+    rewrite {2}/isocanonicalize/template.
     case: ifP=> is_fine ->.
     exists (fun_of_hash_map (color g (init_hash g))); split=> //.
     + apply piso_sort; apply piso_funof=> //.
@@ -1421,13 +1430,13 @@ Definition distinguish_ (g : seq (triple I B L)) (hm : hash_map) : seq (triple I
     Qed.
 
     Lemma eiso_out_template (g : seq (triple I B L)) (ug : uniq g) :
-      effective_iso_ts g (template g).
+      effective_iso_ts g (isocanonicalize g).
     Proof.
     rewrite /iso_ts.
     move: (uniq_template g ug).
     suffices [mu  [-> piso utg]]:
-      exists mu, (template g) = sort le_triple (relabeling_seq_triple mu g)
-                 /\ is_pre_iso_ts g (template g) mu.
+      exists mu, (isocanonicalize g) = sort le_triple (relabeling_seq_triple mu g)
+                 /\ is_pre_iso_ts g (isocanonicalize g) mu.
       rewrite sort_uniq in utg.
       exists mu; apply eiso_sort.
       have {}piso : is_pre_iso_ts g (relabeling_seq_triple mu g) mu by apply piso_sort.
@@ -1491,7 +1500,8 @@ Definition distinguish_ (g : seq (triple I B L)) (hm : hash_map) : seq (triple I
     Lemma distinguish_perm_hm : forall (hm p : hash_map) g,
         (uniq (bnodes_hm hm)) ->
         ~~ is_fine (gen_partition hm) ->
-        hash_map_for g hm ->
+        perm_eq (bnodes_hm hm) (get_bts g) ->
+        (* hash_map_for g hm -> *)
         perm_eq hm p -> distinguish g hm = distinguish g p.
     Proof.
     move=> hm p g.
@@ -1499,7 +1509,8 @@ Definition distinguish_ (g : seq (triple I B L)) (hm : hash_map) : seq (triple I
     have : M hm < S (M hm) by apply ltnSn.
     move: hm (M hm).+1.
     move=> hm n; move: n hm=> n.
-    elim: n => [//| n' IHn hm] measure p ubs_hm is_fineN mem_eq peq.
+    elim: n => [//| n' IHn hm] measure p ubs_hm is_fineN peq_bns peq.
+    have mem_eq : hash_map_for g hm by apply (perm_mem peq_bns).
     have is_fineN_p : ~~ is_fine (gen_partition p).
       by rewrite (perm_hash_eq_fine _ hm) //; apply: perm_map; rewrite perm_sym. 
     have ubs_p : uniq (bnodes_hm p).
@@ -1515,45 +1526,44 @@ Definition distinguish_ (g : seq (triple I B L)) (hm : hash_map) : seq (triple I
       rewrite -(eq_mem_map _ (perm_mem peq_cp)).
       suffices /eq_in_map -> : {in choose_part hm, canonicalize g hm =1 canonicalize g p} by [].
       move=> /= bn bnin.
-      rewrite /canonicalize.
+      rewrite /canonicalize/template.
       have peq_cr :
-        perm_eq (color_refine g (mark bn.1 hm)) (color_refine g (mark bn.1 p)).
-        apply color_refine_perm_hm; apply mark_perm_hm=> //. 
+        perm_eq (color g (mark bn.1 hm)) (color g (mark bn.1 p)).
+        apply color_perm_hm2. apply mark_perm_hm=> //. 
         exact: in_part_in_bnodes.
       have /(perm_map snd)/perm_hash_eq_fine -> := peq_cr.
       case: ifP=> [fine| /negP/negP finePn].
       - apply /rdf_leP.
         suffices /relabeling_seq_triple_ext_in -> :
-          {in get_bts g, (color_refine g (mark bn.1 hm)) =1 (color_refine g (mark bn.1 p))} by [].
+          {in get_bts g, (color g (mark bn.1 hm)) =1 (color g (mark bn.1 p))} by [].
         move=> b.
         rewrite -mem_eq=> bin.
         apply: fun_of_hash_perm.
-        + suff : uniq (bnodes_hm (color_refine g (mark bn.1 hm))) by [].
-          by apply color_refine_ubs; apply mark_ubs=> //; apply in_part_in_bnodes.
-        + apply color_refine_perm_hm; apply mark_perm_hm=> //.
+        + suff : uniq (bnodes_hm (color g (mark bn.1 hm))) by [].
+          by apply color_ubs; apply mark_ubs=> //; apply in_part_in_bnodes.
+        + apply color_perm_hm2; apply mark_perm_hm=> //.
         exact: in_part_in_bnodes.
-        + rewrite color_refine_good_hm; first by rewrite -mem_eq.
+        + rewrite color_good_hm; first by rewrite -mem_eq.
           by apply good_mark=> //; apply in_part_in_bnodes.
       - rewrite (IHn _ _ _ _ _ _ peq_cr) //.
-        + eapply Order.POrderTheory.le_lt_trans; first by apply color_refineP.
+        + eapply Order.POrderTheory.le_lt_trans. 
+          by apply colorP; apply good_mark=> //; apply in_part_in_bnodes.
           by apply (Order.POrderTheory.lt_le_trans (markP _ _ is_fineN ubs_hm bnin) measure).
-        + apply color_refine_ubs.
+        + apply color_ubs.
           apply mark_ubs=> //.
           by apply in_part_in_bnodes.
-        + rewrite (perm_hash_eq_fine _ (color_refine g (mark bn.1 p))) //. 
+        + rewrite (perm_hash_eq_fine _ (color g (mark bn.1 p))) //. 
           by apply: perm_map.
-        + move=> b; rewrite color_refine_good_hm //.
-          apply good_mark=> //.
-          by apply in_part_in_bnodes.
+        + by apply still_good=> //. 
         + exact: choose_part_order.
-         (* by apply perm_map. *)
+        + by apply: (perm_trans _ peq_bns); apply perm_map; rewrite perm_sym.
     Qed.
 
 
     Lemma distinguish_perm_graph : forall (hm : hash_map) (g h : seq (triple I B L)),
         (uniq (bnodes_hm hm)) ->
         ~~ is_fine (gen_partition hm) ->
-        hash_map_for g hm ->
+        perm_eq (bnodes_hm hm) (get_bts g) ->
         perm_eq g h -> distinguish g hm = distinguish h hm.
     Proof.
     move=> hm g h.
@@ -1561,7 +1571,8 @@ Definition distinguish_ (g : seq (triple I B L)) (hm : hash_map) : seq (triple I
     have : M hm < S (M hm) by apply ltnSn.
     move: hm (M hm).+1.
     move=> hm n; move: n hm=> n.
-    elim: n => [//| n' IHn hm] measure g ubs_hm fineN_hm mem_eq peq.
+    elim: n => [//| n' IHn hm] measure g ubs_hm fineN_hm peq_bns peq.
+    have mem_eq : hash_map_for g hm by apply (perm_mem peq_bns).
     rewrite !distinguish_fold_map/distinguish_fold //.
     set cang := map _ _.
     set canh := map _ _.
@@ -1570,44 +1581,59 @@ Definition distinguish_ (g : seq (triple I B L)) (hm : hash_map) : seq (triple I
     rewrite {}/cang{}/canh=>/= c.
     suffices /eq_in_map -> : {in choose_part hm, canonicalize g hm =1 canonicalize h hm} by [].
       move=> /= bn bnin.
-      rewrite /canonicalize.
+      rewrite /canonicalize/template.
       have peq_cr :
-        perm_eq (color_refine g (mark bn.1 hm)) (color_refine h (mark bn.1 hm)).
-      by apply color_refine_perm_graph.
+        perm_eq (color g (mark bn.1 hm)) (color h (mark bn.1 hm)).
+      by apply color_perm_graph.
       have /(perm_map snd)/perm_hash_eq_fine -> := peq_cr.
       case: ifP=> [fine| finePn].
       - apply /rdf_leP.
         suffices /relabeling_seq_triple_ext_in -> :
-          {in get_bts g, (color_refine g (mark bn.1 hm)) =1 (color_refine h (mark bn.1 hm))} by apply perm_map.
+          {in get_bts g, (color g (mark bn.1 hm)) =1 (color h (mark bn.1 hm))} by apply perm_map.
         move=> b.
         rewrite -mem_eq=> bin.
         apply fun_of_hash_perm.
-        + suff : uniq (bnodes_hm (color_refine g (mark bn.1 hm))) by [].
-          by apply color_refine_ubs; apply mark_ubs=> //; apply in_part_in_bnodes.
-        + by apply color_refine_perm_graph.
-        + rewrite color_refine_good_hm; first by rewrite -mem_eq.
+        + suff : uniq (bnodes_hm (color g (mark bn.1 hm))) by [].
+          by apply color_ubs; apply mark_ubs=> //; apply in_part_in_bnodes.
+        + by apply color_perm_graph.
+        + rewrite color_good_hm; first by rewrite -mem_eq.
           apply good_mark=> //.
           by apply in_part_in_bnodes.
       - rewrite -(IHn _ _ _ _ _ _ peq) //.
-        + rewrite (distinguish_perm_hm _ _ _ _ peq_cr) //.
-          * apply color_refine_ubs; apply mark_ubs=> //.
-            by apply in_part_in_bnodes.
-          * rewrite (perm_hash_eq_fine _ (color_refine h (mark bn.1 hm))) ?finePn //. 
+        + rewrite (distinguish_perm_hm _ _ _ _ _ _ peq_cr) //.
+          * by rewrite (perm_uniq (still_good _ _ peq_bns fineN_hm _ bnin)) uniq_get_bts.
+          (* * apply color_ubs; apply mark_ubs=> //.
+            by apply in_part_in_bnodes. *)
+          * rewrite (perm_hash_eq_fine _ (color h (mark bn.1 hm))) ?finePn //. 
             by apply: perm_map.
-            move=> b; rewrite color_refine_good_hm //.
-        + move=> b'; rewrite (good_mark mem_eq) //.
+            by apply still_good.
+        (* + eapply Order.POrderTheory.le_lt_trans. 
+          apply colorP; apply good_mark=> //. apply perm_mem. apply (perm_trans peq_bns). 
+          by apply peq_get_bts.
+        + by apply in_part_in_bnodes. *)
+          (* eapply (Order.POrderTheory.lt_le_trans _ measure). (markP _ _ is_fineN ubs_hm bnin) measure).
+        + apply color_ubs.
+          apply mark_ubs=> //.
           by apply in_part_in_bnodes.
-        + eapply Order.POrderTheory.le_lt_trans; first by apply color_refineP.
-          by apply (Order.POrderTheory.lt_le_trans (markP _ _ fineN_hm ubs_hm bnin) measure).
-        + apply color_refine_ubs.
+        + rewrite (perm_hash_eq_fine _ (color g (mark bn.1 p))) //. 
+          by apply: perm_map.
+        + by apply still_good=> //. 
+        + exact: choose_part_order.
+        + by apply: (perm_trans _ peq_bns); apply perm_map; rewrite perm_sym. *)
+        + eapply Order.POrderTheory.le_lt_trans. apply colorP. apply good_mark.
+          move=> b.
+          rewrite mem_eq. apply perm_mem. 
+          by apply peq_get_bts.
+        + by apply in_part_in_bnodes.
+        + apply (Order.POrderTheory.lt_le_trans (markP _ _ fineN_hm ubs_hm bnin) measure).
+        + apply color_ubs.
           apply mark_ubs=> //.
           by apply in_part_in_bnodes.
         + by rewrite finePn.
-        + move=> b; rewrite color_refine_good_hm //.
-        by apply perm_mem; apply peq_get_bts; rewrite perm_sym.
-        apply good_mark=> //.
-        by move=> b'; move/peq_get_bts/perm_mem : peq=> <-.
-        by apply in_part_in_bnodes.
+        + suff H: perm_eq (bnodes_hm (color h (mark bn.1 hm))) (bnodes_hm (color g (mark bn.1 hm))). 
+            by apply (perm_trans H); apply still_good.
+          by apply perm_map; apply color_perm_graph; rewrite perm_sym.
+        + by apply: (perm_trans peq_bns); apply peq_get_bts. 
     Qed.
 
     Section wip.
@@ -1756,11 +1782,11 @@ Definition distinguish_ (g : seq (triple I B L)) (hm : hash_map) : seq (triple I
     Hint Resolve color_is_perm_hm.
     Hint Resolve color_pres_bnodes.
 
-    Lemma color_refine_post_rel : post_rel color_refine.
+    (* Lemma color_refine_post_rel : post_rel color_refine.
     Proof.
     move=> G hm mu mu_injG mu_injhm.
     by apply color_refine_post_relabeling.
-    Qed.
+    Qed. *)
 
     (* Lemma color_refine_is_perm_graph: perm_graph color_refine. *)
     (* Proof. *)
@@ -1778,7 +1804,7 @@ Definition distinguish_ (g : seq (triple I B L)) (hm : hash_map) : seq (triple I
     Qed.
 
     Lemma eiso_correct_complete (g h : seq (triple I B L)) (ug: uniq g) (uh: uniq h) :
-      effective_iso_ts g h <-> (template g) == (template h).
+      effective_iso_ts g h <-> (isocanonicalize g) == (isocanonicalize h).
     Proof.
     split; last first.
     + move=> /eqP eqmgmh.
@@ -1786,7 +1812,7 @@ Definition distinguish_ (g : seq (triple I B L)) (hm : hash_map) : seq (triple I
       rewrite eqmgmh=> mgh.
       have /(effective_iso_ts_sym uh) hmh := eiso_out_template h uh.
       by apply: (effective_iso_ts_trans mgh hmh).
-    rewrite /template=> eiso; rewrite -(iso_color_fine eiso) //.
+    rewrite /isocanonicalize/template=> eiso; rewrite -(iso_color_fine eiso) //.
     set col_g := color _ _.
     set col_h := color _ _.
     have col_h_ubs : uniq (bnodes_hm col_h).
@@ -1806,15 +1832,20 @@ Definition distinguish_ (g : seq (triple I B L)) (hm : hash_map) : seq (triple I
         have /perm_trans -> // : (perm_eq (color h (init_hash' h (map1 mu [::]))) (color h (map1 mu (init_hash' g [::])))).
           by apply perm_graph_post_rel_in_hm.
         by apply perm_post_rel_in_hm=> // b bin; rewrite !good_init; apply mu_inj.
-      have col_h_rel_mem_bs : hash_map_for (relabeling_seq_triple mu g) col_h.
+      have col_h_rel_mem_bs : perm_eq (bnodes_hm col_h) (get_bts (relabeling_seq_triple mu g)).
+        + apply uniq_perm=> //; first by apply uniq_get_bts.
         move=> b; rewrite color_good_hm; last by apply good_init.
         by apply perm_mem; apply peq_get_bts; rewrite perm_sym.
       have is_fineN_col_h : ~~ is_fine (gen_partition col_h).
         suff /perm_hash_eq_fine-> : perm_eq (hashes_hm col_h) (hashes_hm col_g) by rewrite finePn.
         rewrite -(hashes_of_map1 col_g mu).
         exact: perm_map.
-      rewrite -(distinguish_perm_graph _ _ _ _ peq) // (distinguish_perm_hm _ _ _ _ peq_col) //.
-      have : good_hash_map_for g col_g. by apply eq_mem_good_hm; apply color_hm_for.
+      rewrite -(distinguish_perm_graph _ _ _ _ _ _ peq) // (distinguish_perm_hm _ _ _ _ _ _ peq_col) //.
+      have : perm_eq (bnodes_hm col_g) (get_bts g). 
+        apply uniq_perm=> //.
+        * by apply color_ubs; apply init_hash_ubs.
+        * by apply uniq_get_bts.
+        by apply color_hm_for.
       have : uniq (bnodes_hm col_g).
         by apply color_ubs; apply init_hash_ubs.
       have : M col_g < S (M col_g) by apply ltnSn.
@@ -1822,6 +1853,7 @@ Definition distinguish_ (g : seq (triple I B L)) (hm : hash_map) : seq (triple I
       move: col_g (M col_g).+1 {peq_col} finePn.
       move=> hm n; move: n hm=> n.
       elim: n => [//| n' IHn hm] hfine mem_eq_bs measure ubs_hm ghm_f.
+      (* elim: n => [//| n' IHn hm] peq_col hfine mem_eq_bs measure ubs_hm ghm_f. *)
       have huniq : uniq (bnodes_hm (map1 mu hm)).
          rewrite map1_bnodesC; apply/in_map_injP=> //.
          move=> b1 b2; rewrite !mem_eq_bs; exact: mu_inj.
@@ -1829,7 +1861,12 @@ Definition distinguish_ (g : seq (triple I B L)) (hm : hash_map) : seq (triple I
          have := perm_refl (hashes_hm hm).
          rewrite -[in X in (perm_eq X  _)](hashes_of_map1 _ mu); move/perm_hash_eq_fine->.
          by rewrite hfine.
-      rewrite !distinguish_fold_map /distinguish_fold ?hfine //.
+      rewrite !distinguish_fold_map /distinguish_fold ?hfine //; last first.
+      - apply: (perm_trans _ col_h_rel_mem_bs).
+        rewrite perm_sym; apply: (perm_trans col_h_rel_mem_bs).
+        rewrite perm_sym map1_bnodesC.
+        apply (perm_trans (perm_map mu ghm_f)).
+        by apply perm_eq_bts_relabel_inj_in=> //.
       set cang := (map _ _).
       set canh := (map _ _).
       suffices mem_eq_cands : cang =i canh.
@@ -1843,7 +1880,7 @@ Definition distinguish_ (g : seq (triple I B L)) (hm : hash_map) : seq (triple I
       suffices -> :
         [seq can_g i | i <- choose_part hm] = [seq ((can_h) \o (fun p => (mu p.1, p.2))) i | i <-  choose_part hm] by [].
       suffices step (bn : B * nat) : bn \in choose_part hm -> can_g bn = can_h (mu bn.1, bn.2) by apply/eq_in_map.
-        rewrite /can_g /can_h /canonicalize => hb /=.
+        rewrite /can_g /can_h /canonicalize/template => hb /=.
         set hmg := (X in is_fine (gen_partition X)).
         set test_g := is_fine _.
         set hmh := (X in is_fine (gen_partition X)).
@@ -1852,25 +1889,25 @@ Definition distinguish_ (g : seq (triple I B L)) (hm : hash_map) : seq (triple I
          suffices /perm_hash_eq_fine : (perm_eq (hashes_hm hmg) (hashes_hm hmh)).
            by rewrite /test_g => ->.
          rewrite /hmh -(hashes_of_map1 hmg mu); apply perm_map.
-         have /(perm_trans _) -> // : perm_eq (color_refine (relabeling_seq_triple mu g) (mark (mu bn.1) (map1 mu hm))) hmh.
-           apply color_refine_perm_hm; apply mark_perm_hm=> //.
+         have /(perm_trans _) -> // : perm_eq (color (relabeling_seq_triple mu g) (mark (mu bn.1) (map1 mu hm))) hmh.
+           apply color_perm_hm2; apply mark_perm_hm=> //.
            rewrite map1_bnodesC map_f //; exact: in_part_in_bnodes.
-         have /(perm_trans _) -> //: perm_eq (color_refine (relabeling_seq_triple mu g) (map1 mu (mark bn.1 hm))) (color_refine (relabeling_seq_triple mu g) (mark (mu bn.1) (map1 mu hm))).
-           apply color_refine_perm_hm; rewrite perm_sym.
+         have /(perm_trans _) -> //: perm_eq (color (relabeling_seq_triple mu g) (map1 mu (mark bn.1 hm))) (color (relabeling_seq_triple mu g) (mark (mu bn.1) (map1 mu hm))).
+           apply color_perm_hm2; rewrite perm_sym.
            have H := in_part_in_bnodes _ _ hb.
            by apply (mark_post_rel _ _ H)=> b1 b2; rewrite !mem_eq_bs; apply mu_inj.
          have mu_inj_mhm: {in bnodes_hm (mark bn.1 hm) &, injective mu}.
            by move=> b1 b2; rewrite !(good_mark mem_eq_bs) // ?in_part_in_bnodes //; apply mu_inj.
-         by rewrite /hmg perm_sym; apply color_refine_post_rel=> //.
+         by rewrite /hmg perm_sym; apply color_post_rel=> //.
         case: ifP => [htest | hNtest].
         have ubs_hmg : (uniq (bnodes_hm hmg)).
-            apply color_refine_ubs.
+            apply color_ubs.
             apply mark_ubs=> //.
             by apply in_part_in_bnodes.
-        have hmg_inj : {in get_bts g &, injective (color_refine g (mark bn.1 hm))}.
+        have hmg_inj : {in get_bts g &, injective (color g (mark bn.1 hm))}.
             move=> b1 b2 bin1 bin2.
-          have eq_bs: hash_map_for g (color_refine g (mark bn.1 hm)).
-            by apply color_refine_good_hm; apply good_mark; [apply mem_eq_bs | apply in_part_in_bnodes].
+          have eq_bs: hash_map_for g (color g (mark bn.1 hm)).
+            by apply color_good_hm; apply good_mark; [apply mem_eq_bs | apply in_part_in_bnodes].
           have hm_inj := funof_snd_inj eq_bs htest.
           rewrite !simpl_fun_of_hm ?eq_bs //.
           rewrite -/hmg.
@@ -1906,7 +1943,7 @@ Definition distinguish_ (g : seq (triple I B L)) (hm : hash_map) : seq (triple I
           rewrite /test_g/hmg in htest.
           apply /in_map_injP=> //.
           by apply inj_get_bts_inj_ts.
-        - set cr := color_refine _ _.
+        - set cr := color _ _.
           suffices : forall (hm p : hash_map),
                 uniq (bnodes_hm hm) ->
                 perm_eq hm p ->
@@ -1917,19 +1954,19 @@ Definition distinguish_ (g : seq (triple I B L)) (hm : hash_map) : seq (triple I
               have mu_inj_hm: {in [seq i.1 | i <- hm] &, injective mu}.
                 move=> b1 b2; rewrite !mem_eq_bs.
                 by apply mu_inj.
-              apply color_refine_ubs; apply mark_ubs.
+              apply color_ubs; apply mark_ubs.
               rewrite map1_map /bnodes_hm -map_comp.
               rewrite eq_mapC map_comp.
               rewrite map_inj_in_uniq //.
               rewrite map1_map/bnodes_hm -map_comp eq_mapC map_comp.
               by move/in_part_in_bnodes : hb=> /(map_f mu).
-            have peq_cr: perm_eq cr (map1 mu (color_refine g (mark bn.1 hm))).
+            have peq_cr: perm_eq cr (map1 mu (color g (mark bn.1 hm))).
               rewrite /cr.
-              have /(perm_trans) -> // : perm_eq (color_refine (relabeling_seq_triple mu g) (mark (mu bn.1) (map1 mu hm))) (color_refine (relabeling_seq_triple mu g) (map1 mu (mark bn.1 hm))).
-                apply color_refine_perm_hm.
+              have /(perm_trans) -> // : perm_eq (color (relabeling_seq_triple mu g) (mark (mu bn.1) (map1 mu hm))) (color (relabeling_seq_triple mu g) (map1 mu (mark bn.1 hm))).
+                apply color_perm_hm2.
                 have H := in_part_in_bnodes _ _ hb.
                 by apply (mark_post_rel _ _ H)=> b1 b2; rewrite !mem_eq_bs; apply mu_inj.
-              apply color_refine_post_rel=> //.
+              apply color_post_rel=> //.
               move=> b1 b2.
               rewrite !(good_mark mem_eq_bs) //. apply mu_inj.
               by apply in_part_in_bnodes.
@@ -1940,10 +1977,10 @@ Definition distinguish_ (g : seq (triple I B L)) (hm : hash_map) : seq (triple I
             move=> b1 b2 bin1 bin2.
             rewrite /cr !eq_hm.
             suffices /andP[/mapP /=[bb1 bb1in ->] /mapP/= [bb2 bb2in ->]]: (b1 \in (map mu (get_bts g))) && (b2 \in (map mu (get_bts g))).
-            have -> : map1 mu (color_refine g (mark bn.1 hm)) (mu bb1) = (map1 mu (color_refine g (mark bn.1 hm)) \o mu) bb1 by [].
-            have -> : map1 mu (color_refine g (mark bn.1 hm)) (mu bb2) = (map1 mu (color_refine g (mark bn.1 hm)) \o mu) bb2 by [].
+            have -> : map1 mu (color g (mark bn.1 hm)) (mu bb1) = (map1 mu (color g (mark bn.1 hm)) \o mu) bb1 by [].
+            have -> : map1 mu (color g (mark bn.1 hm)) (mu bb2) = (map1 mu (color g (mark bn.1 hm)) \o mu) bb2 by [].
             have ghm : good_hash_map_for g hmg.
-              apply eq_mem_good_hm=> t; rewrite /hmg; apply color_refine_good_hm.
+              apply eq_mem_good_hm=> t; rewrite /hmg; apply color_good_hm.
               by apply good_mark; [apply mem_eq_bs | apply in_part_in_bnodes].
             rewrite !ghm //.
             by move /hmg_inj=> /(_ bb1in bb2in) ->.
@@ -1951,7 +1988,7 @@ Definition distinguish_ (g : seq (triple I B L)) (hm : hash_map) : seq (triple I
             move=> /peq_get_bts.
             move=> /perm_eq_bts_relabel_inj_in=> /(_ mu_inj) peq_rel.
             by rewrite !(perm_mem peq_rel); apply /andP; split.
-          rewrite color_refine_good_hm //.
+          rewrite color_good_hm //.
           have H := in_part_in_bnodes _ _ hb.
           have /perm_mem peq_mark:= mark_post_rel bn.1 hm H in_hm_inj.
           move=> b. rewrite (eq_mem_map _ peq_mark).
@@ -1964,7 +2001,7 @@ Definition distinguish_ (g : seq (triple I B L)) (hm : hash_map) : seq (triple I
           rewrite -(eq_mem_map _ eq_bs_mark) /bnodes_hm -map_comp.
           by congr (in_mem b).
           *
-          rewrite color_refine_good_hm //.
+          rewrite color_good_hm //.
           have H := in_part_in_bnodes _ _ hb.
           have /perm_mem peq_mark:= mark_post_rel bn.1 hm H in_hm_inj.
           move=> b. rewrite (eq_mem_map _ peq_mark).
@@ -1982,23 +2019,23 @@ Definition distinguish_ (g : seq (triple I B L)) (hm : hash_map) : seq (triple I
             rewrite relabeling_seq_triple_comp.
             apply relabeling_ext_in.
             apply eq_in_bs_ing.
-            have: perm_eq (color_refine (relabeling_seq_triple mu g) (mark (mu bn.1) (map1 mu hm))) (color_refine (relabeling_seq_triple mu g) (map1 mu (mark bn.1 hm))).
+            have: perm_eq (color (relabeling_seq_triple mu g) (mark (mu bn.1) (map1 mu hm))) (color (relabeling_seq_triple mu g) (map1 mu (mark bn.1 hm))).
             have H := in_part_in_bnodes _ _ hb.
-            by apply color_refine_perm_hm; apply (mark_post_rel _ _ H) ; move=> b1 b2; rewrite !mem_eq_bs; apply mu_inj.
+            by apply color_perm_hm2; apply (mark_post_rel _ _ H) ; move=> b1 b2; rewrite !mem_eq_bs; apply mu_inj.
             move=> peq' b1 b1in.
-            have eq_bs_cr : hash_map_for g (color_refine g (mark bn.1 hm)).
-              by apply color_refine_good_hm; apply good_mark=> //; apply in_part_in_bnodes.
+            have eq_bs_cr : hash_map_for g (color g (mark bn.1 hm)).
+              by apply color_good_hm; apply good_mark=> //; apply in_part_in_bnodes.
             rewrite /=.
-            suffices peq_cr : perm_eq (color_refine (relabeling_seq_triple mu g) (mark (mu bn.1) (map1 mu hm))) (map1 mu (color_refine g (mark bn.1 hm))).
+            suffices peq_cr : perm_eq (color (relabeling_seq_triple mu g) (mark (mu bn.1) (map1 mu hm))) (map1 mu (color g (mark bn.1 hm))).
               rewrite (fun_of_hash_perm _ _ _ peq_cr).
-              have -> : map1 mu (color_refine g (mark bn.1 hm)) (mu b1) = (map1 mu (color_refine g (mark bn.1 hm)) \o mu) b1 by [].
-              by rewrite (@eq_mem_good_hm g (color_refine g (mark bn.1 hm)) _).
+              have -> : map1 mu (color g (mark bn.1 hm)) (mu b1) = (map1 mu (color g (mark bn.1 hm)) \o mu) b1 by [].
+              by rewrite (@eq_mem_good_hm g (color g (mark bn.1 hm)) _).
             rewrite /bnodes_hm.
             move: peq_cr=> /(perm_map fst)/perm_uniq ->.
             have /eq_map eq_mapC : fst \o (fun p : B * nat => (mu p.1,p.2)) =1 mu \o fst by [].
             rewrite map1_map -map_comp eq_mapC map_comp.
             apply /in_map_injP.
-            apply color_refine_ubs. apply mark_ubs. done. by apply in_part_in_bnodes.
+            apply color_ubs. apply mark_ubs. done. by apply in_part_in_bnodes.
             move=> b1' b2'. rewrite !eq_bs_cr. apply mu_inj.
             rewrite (eq_mem_map _ (perm_mem peq_cr)) map1_map -map_comp.
             have /eq_map eq_mapC : fst \o (fun p : B * nat => (mu p.1,p.2)) =1 mu \o fst.
@@ -2008,11 +2045,11 @@ Definition distinguish_ (g : seq (triple I B L)) (hm : hash_map) : seq (triple I
             move: b1in.
             rewrite -eq_bs_cr.
             by move=> /(map_f mu).
-            have /perm_trans -> //: perm_eq (color_refine (relabeling_seq_triple mu g) (mark (mu bn.1) (map1 mu hm)))
-                     (color_refine (relabeling_seq_triple mu g) (map1 mu (mark bn.1 hm))).
+            have /perm_trans -> //: perm_eq (color (relabeling_seq_triple mu g) (mark (mu bn.1) (map1 mu hm)))
+                     (color (relabeling_seq_triple mu g) (map1 mu (mark bn.1 hm))).
               have H := in_part_in_bnodes _ _ hb.
-              by apply color_refine_perm_hm; apply (mark_post_rel _ _ H) => //.
-            apply color_refine_post_relabeling=> //.
+              by apply color_perm_hm2; apply (mark_post_rel _ _ H) => //.
+            apply color_post_relabeling=> //.
               move=> b1' b2'.
               suffices mem_bs_mark : (bnodes_hm (mark bn.1 hm)) =i bnodes_hm hm.
                 by rewrite !mem_bs_mark; apply in_hm_inj.
@@ -2022,9 +2059,9 @@ Definition distinguish_ (g : seq (triple I B L)) (hm : hash_map) : seq (triple I
           have peq_mark_post_rel : perm_eq (mark (mu bn.1) (map1 mu hm)) (map1 mu (mark bn.1 hm)).
             have H := in_part_in_bnodes _ _ hb.
             by apply (mark_post_rel _ _ H) => b1 b2; rewrite !mem_eq_bs; apply mu_inj.
-          have /(color_refine_perm_hm (relabeling_seq_triple mu g)) := peq_mark_post_rel.
-          have cr_ubs : uniq (bnodes_hm (color_refine (relabeling_seq_triple mu g) (mark (mu bn.1) (map1 mu hm)))).
-            apply color_refine_ubs. apply mark_ubs.
+          have /(color_perm_hm2 (relabeling_seq_triple mu g)) := peq_mark_post_rel.
+          have cr_ubs : uniq (bnodes_hm (color (relabeling_seq_triple mu g) (mark (mu bn.1) (map1 mu hm)))).
+            apply color_ubs. apply mark_ubs.
             rewrite map1_map/bnodes_hm -map_comp.
             have /eq_map eq_mapC : fst \o (fun p : B * nat => (mu p.1,p.2)) =1 mu \o fst.
               by [].
@@ -2038,8 +2075,8 @@ Definition distinguish_ (g : seq (triple I B L)) (hm : hash_map) : seq (triple I
               by [].
             rewrite map1_map/bnodes_hm -map_comp eq_mapC map_comp.
             by move/in_part_in_bnodes/(map_f mu) : hb.
-          have cr_mem_eq_bs : hash_map_for (relabeling_seq_triple mu g) (color_refine (relabeling_seq_triple mu g) (mark (mu bn.1) (map1 mu hm))).
-            move=> b; rewrite color_refine_good_hm //.
+          have cr_mem_eq_bs : hash_map_for (relabeling_seq_triple mu g) (color (relabeling_seq_triple mu g) (mark (mu bn.1) (map1 mu hm))).
+            move=> b; rewrite color_good_hm //.
             move=> b'; rewrite (@good_mark (relabeling_seq_triple mu g)) //.
             rewrite /hash_map_for map1_map/bnodes_hm -map_comp.
             have /eq_map eq_mapC : fst \o (fun p : B * nat => (mu p.1,p.2)) =1 mu \o fst.
@@ -2053,51 +2090,50 @@ Definition distinguish_ (g : seq (triple I B L)) (hm : hash_map) : seq (triple I
               by [].
             rewrite eq_mapC map_comp.
             by move/in_part_in_bnodes/(map_f mu) : hb.
-            have side1 : ~~ is_fine (gen_partition (color_refine (relabeling_seq_triple mu g) (mark (mu bn.1) (map1 mu hm)))).
+            have side1 : ~~ is_fine (gen_partition (color (relabeling_seq_triple mu g) (mark (mu bn.1) (map1 mu hm)))).
             suff/perm_hash_eq_fine-> : perm_eq (hashes_hm hmh) (hashes_hm hmg) by rewrite -/test_g hNtest.
             rewrite -(hashes_of_map1 hmg mu).
             apply: perm_map.
-            have trans_l : perm_eq hmh (color_refine (relabeling_seq_triple mu g) (map1 mu (mark bn.1 hm))). 
-              apply: color_refine_perm_hm; apply: mark_post_rel; first by apply in_part_in_bnodes.
+            have trans_l : perm_eq hmh (color (relabeling_seq_triple mu g) (map1 mu (mark bn.1 hm))). 
+              apply: color_perm_hm2; apply: mark_post_rel; first by apply in_part_in_bnodes.
               move=> b1 b2. rewrite !mem_eq_bs. exact: mu_inj.
             apply: (perm_trans trans_l).
-            apply: color_refine_post_rel => //. 
+            apply: color_post_rel => //. 
             move=> b1 b2. rewrite !(good_mark mem_eq_bs) ?in_part_in_bnodes //; exact: mu_inj.
           move=> /(distinguish_perm_hm _ _ _) -> //.
-          have peq_cr_post_rel : perm_eq (color_refine (relabeling_seq_triple mu g) (map1 mu (mark bn.1 hm))) (map1 mu (color_refine g (mark bn.1 hm))).
-            by apply color_refine_post_rel=> // b1 b2; rewrite !(good_mark mem_eq_bs) // ?in_part_in_bnodes //; apply mu_inj.
-          have cr_post_ubs : uniq (bnodes_hm (color_refine (relabeling_seq_triple mu g) (map1 mu (mark bn.1 hm)))).
-            move: peq_mark_post_rel. move=> /(color_refine_perm_hm (relabeling_seq_triple mu g)).
+          have peq_cr_post_rel : perm_eq (color (relabeling_seq_triple mu g) (map1 mu (mark bn.1 hm))) (map1 mu (color g (mark bn.1 hm))).
+            by apply color_post_rel=> // b1 b2; rewrite !(good_mark mem_eq_bs) // ?in_part_in_bnodes //; apply mu_inj.
+          have cr_post_ubs : uniq (bnodes_hm (color (relabeling_seq_triple mu g) (map1 mu (mark bn.1 hm)))).
+            move: peq_mark_post_rel. move=> /(color_perm_hm2 (relabeling_seq_triple mu g)).
             by move=> /(perm_map fst) /perm_uniq <-.
           have cr_post_eq_mem :
-            hash_map_for (relabeling_seq_triple mu g) (color_refine (relabeling_seq_triple mu g) (map1 mu (mark bn.1 hm))).
-            move=> b; move: peq_mark_post_rel. move=> /(color_refine_perm_hm (relabeling_seq_triple mu g)).
+            hash_map_for (relabeling_seq_triple mu g) (color (relabeling_seq_triple mu g) (map1 mu (mark bn.1 hm))).
+            move=> b; move: peq_mark_post_rel. move=> /(color_perm_hm2 (relabeling_seq_triple mu g)).
             by move=> /(perm_map fst)/perm_mem <-.
-          have side2 : ~~ is_fine (gen_partition (color_refine (relabeling_seq_triple mu g) (map1 mu (mark bn.1 hm)))).
-           suff/(perm_map snd)/perm_hash_eq_fine<- : perm_eq hmh (color_refine (relabeling_seq_triple mu g) (map1 mu (mark bn.1 hm))) by []. 
-           by apply: color_refine_perm_hm=> //.
-          have /(distinguish_perm_hm _ _ _) -> // := peq_cr_post_rel.
+          have side2 : ~~ is_fine (gen_partition (color (relabeling_seq_triple mu g) (map1 mu (mark bn.1 hm)))).
+           suff/(perm_map snd)/perm_hash_eq_fine<- : perm_eq hmh (color (relabeling_seq_triple mu g) (map1 mu (mark bn.1 hm))) by []. 
+           by apply: color_perm_hm2=> //.
+          have /(distinguish_perm_hm _ _ _ _) -> // := peq_cr_post_rel.
           apply /eqP.
-          apply IHn=> //.
-          - apply color_refine_good_hm.
+          apply IHn=> //. 
+          - apply color_good_hm.
             by apply good_mark; last by apply in_part_in_bnodes.
-          - eapply Order.POrderTheory.le_lt_trans; first by apply color_refineP.
-            have {hfine} hfine : ~~ is_fine (gen_partition hm) by rewrite hfine.
-            by apply (Order.POrderTheory.lt_le_trans (markP _ hm hfine ubs_hm hb) measure).
-          - apply color_refine_ubs.
-          apply mark_ubs=> //.
-          by apply in_part_in_bnodes.
-          apply (@eq_mem_good_hm g (color_refine g (mark bn.1 hm))).
-          by apply color_refine_good_hm; apply good_mark; [ | apply in_part_in_bnodes].
+          - eapply Order.POrderTheory.le_lt_trans. 
+            * by apply colorP=> //; apply good_mark=> //; apply in_part_in_bnodes.
+            by apply: (Order.POrderTheory.lt_le_trans (markP _ hm _ ubs_hm hb) measure); by rewrite hfine.
+        + by apply: color_ubs; apply: mark_ubs=> //; exact: in_part_in_bnodes.
+        + by apply still_good=> //; rewrite hfine //.
+        + by apply uniq_perm=> //; apply uniq_get_bts. 
+        + by apply uniq_perm=> //; apply uniq_get_bts. 
      Qed.
 
     Lemma eiso_correct_complete' (g h : seq (triple I B L)) (ug: uniq g) (uh: uniq h) :
-      perm_eq (template g) (template h) <-> effective_iso_ts g h.
+      perm_eq (isocanonicalize g) (isocanonicalize h) <-> effective_iso_ts g h.
     Proof.
     split; last by move=> /(eiso_correct_complete _ _ ug uh)/eqP ->; apply perm_refl.
     + move=> eqmgmh.
     have gmg := eiso_out_template g ug.
-    suffices mgmh : effective_iso_ts (template g) (template h).
+    suffices mgmh : effective_iso_ts (isocanonicalize g) (isocanonicalize h).
       have /(effective_iso_ts_sym uh) hmh := eiso_out_template h uh.
       apply: (effective_iso_ts_trans gmg _).
       by apply: (effective_iso_ts_trans mgmh hmh).
@@ -2131,6 +2167,7 @@ Definition distinguish_ (g : seq (triple I B L)) (hm : hash_map) : seq (triple I
 
 
 End Template.
+
 
 Section KmappingInstance.  
 
@@ -2233,17 +2270,6 @@ move=> g; rewrite /init_hash_kmap/bnodes_hm.
 by rewrite map_fst_zip_size ?uniq_get_bts // size_nseq.
 Qed.
 
-(* init hash yields a good hash for its input *)
-(* TODO not longer necesary *)
-(* Lemma init_hash_inv_kmap (g : seq (triple I B L)) : good_hash_map_for g (init_hash_kmap g). *)
-(* Proof. *)
-(* set s := get_bts g. *)
-(* move=> mu mu_inj b bin. *)
-(* rewrite /init_hash_kmap -/s. *)
-(* set t : hash_map := zip _ _. rewrite /=. *)
-(* by apply shift_hm=> //; rewrite /t /bnodes_hm zip_proj1 // size_nseq. *)
-(* Qed. *)
-
 (* Assia: This could even be the definition of gen_partition. *)
 Definition gen_ordered_partition (hm : hash_map) : partition :=
   map (part_of hm) (sort leq (undup (hashes_hm hm))).
@@ -2295,11 +2321,6 @@ Lemma color_good_hm_kmap (g : seq (triple I B L)) (hm : hash_map):
   hash_map_for g hm -> hash_map_for g (color_kmap g hm).
 Proof. by []. Qed.
 
-(* TODO not longer necesary *)
-(* Lemma color_inv_kmap : forall (g : seq (triple I B L)) (hm : hash_map), *)
-(*             good_hash_map_for g hm -> good_hash_map_for g (color_kmap g hm). *)
-(* Proof. move=> g hm H1 mu ghf b bin; by apply H1. Qed. *)
-
 Lemma color_post_relabeling_kmap : forall (g : seq (triple I B L)) (mu : B -> B) (hm : hash_map),
                         {in get_bts g &, injective mu} ->
                         {in bnodes_hm hm &, injective mu} ->
@@ -2339,11 +2360,6 @@ Proof. by apply color_ubs_kmap. Qed.
 Lemma color_refine_good_hm_kmap : forall (g : seq (triple I B L)) (hm : hash_map),
   hash_map_for g hm -> hash_map_for g (color_refine_kmap g hm).
 Proof. by apply color_good_hm_kmap. Qed.
-
-(* TODO not longer necesary *)
-(* Lemma color_refine_inv_kmap : forall (g : seq (triple I B L)) (hm : hash_map), *)
-(*                     good_hash_map_for g hm -> good_hash_map_for g (color_refine_kmap g hm). *)
-(* Proof. by apply color_inv_kmap. Qed. *)
 
 Lemma color_refine_post_relabeling_kmap : forall (g : seq (triple I B L)) (hm : hash_map) (mu : B -> B),
                                 {in get_bts g &, injective mu} ->
@@ -2684,56 +2700,6 @@ Lemma distinguished_mark (bn: B * nat) (hm : hash_map):
   by apply distinguished_mark.
   Qed.
 
-  (* TODO not longer necesary *)
-  (* Lemma mark_inv_kmap (g : seq (triple I B L)) (hm : hash_map) b : *)
-  (*     (* claim: we need new hypothesis get_bts =i bnodes_hm hm *) *)
-  (*     get_bts g =i bnodes_hm hm -> (* new hypothesis *) *)
-  (*     b \in get_bts g ->  *)
-  (*     uniq (bnodes_hm hm) -> *)
-  (*     good_hash_map_for g hm -> *)
-  (*       good_hash_map_for g (mark_kmap_2 b hm).  *)
-  (* Proof. *)
-  (* move=> mem_eq bin huniq ghf. *)
-  (* move=> mu mu_inj_bs b' b'in. *)
-  (* rewrite /mark_kmap_2 /mark_hash_kmap_2. *)
-  (* set i := find _ _. *)
-  (* set v := (b, fresh hm). *)
-  (* rewrite {1}set_nthE -has_find has_eq_bnodes -mem_eq bin. *)
-  (* have e : take i hm ++ v :: drop i.+1 hm = set_nth v hm i v. *)
-  (*   by rewrite set_nthE -has_find has_eq_bnodes -mem_eq bin. *)
-  (* rewrite e. *)
-  (* (* have {ghf} ghf := (ghf mu mu_inj_bs).*) *)
-  (* set almost_hm := set_nth _ _ _ _.   *)
-  (* rewrite /equations.fun_of_hash_map /=. *)
-  (* have b'in_almost : b' \in bnodes_hm almost_hm. *)
-  (*   rewrite -[almost_hm]e. *)
-  (*   move: b'in; rewrite mem_eq -{1}[hm](cat_take_drop i). *)
-  (*   rewrite /bnodes_hm !map_cat !mem_cat; case/orP; first by move->. *)
-  (*   rewrite -[drop i _](cat_take_drop 1) drop_drop add1n map_cat mem_cat /=. *)
-  (*   case/orP=> /= hb'; last by rewrite mem_cons // orbT. *)
-  (*   suff -> : b = b' by rewrite inE eqxx orbT. *)
-  (*   move: hb'. *)
-  (*   rewrite [i]find_eq_bnode. *)
-  (*   have/bnodes_hm_exists[n hn] : b \in bnodes_hm hm by rewrite -mem_eq. *)
-  (*   rewrite -(index_bnodes hn) //. *)
-  (*   by rewrite drop_index //= take0 /= in_cons orbF; move/eqP. *)
-  (* have mu_inj_set : {in bnodes_hm almost_hm &, injective mu}. *)
-  (*   move=> x y.  *)
-  (*   suff aux t : t \in bnodes_hm almost_hm -> t \in bnodes_hm hm.  *)
-  (*     by move/aux => hx /aux hy; apply: mu_inj_bs; rewrite ?mem_eq. *)
-  (*   rewrite -[almost_hm]e /bnodes_hm !map_cat. *)
-  (*   rewrite !mem_cat map_cons; case/orP. *)
-  (*   - by apply: mem_subseq; apply: map_subseq; exact: take_subseq. *)
-  (*   rewrite in_cons; case/orP. *)
-  (*   - by move/eqP->; rewrite -/(bnodes_hm hm) -mem_eq. *)
-  (*   by apply: mem_subseq; apply: map_subseq; exact: drop_subseq. *)
-  (* rewrite /almost_hm set_nthE -has_find has_eq_bnodes -mem_eq bin e. *)
-  (* rewrite bnodes_hm_index_size; last by rewrite map1_bnodesC ?map_f. *)
-  (* rewrite bnodes_hm_index_size //; congr nat_inj. *)
-  (* rewrite map1_bnodesC map1_map (nth_map (b',0)) /= index_map_in //. *)
-  (* by rewrite bnodes_hm_index_ltn. *)
-  (* Qed. *)
-
   Lemma fresh_map1 (hm : hash_map) (mu : B -> B):
     fresh hm = fresh (map1 mu hm).
   Proof. by rewrite /fresh hashes_of_map1. Qed.
@@ -2849,7 +2815,8 @@ Lemma distinguished_mark (bn: B * nat) (hm : hash_map):
   by rewrite set_nth_map_fst // set_nth_eq.
   Qed.
 
-  Lemma color_refineP_kmap (g : seq (triple I B L)) (hm : hash_map) : M_kmap (color_refine_kmap g hm) <= M_kmap hm.
+  Lemma color_refineP_kmap (g : seq (triple I B L)) (hm : hash_map) :
+    hash_map_for g hm -> M_kmap (color_refine_kmap g hm) <= M_kmap hm.
   Proof. by []. Qed.
 (* 
   Lemma gen_partition_perm_eq (hm1 hm2 : hash_map) :
@@ -2883,7 +2850,7 @@ Lemma distinguished_mark (bn: B * nat) (hm : hash_map):
        perm_eq (part_of hm1 n) (part_of hm2 n).
   Proof. by move=> hm12; rewrite /part_of perm_filter. Qed.
 
-  Lemma choose_part_kmap_order (hm1 hm2 : equations.hash_map B) :
+  Lemma choose_part_kmap_order (hm1 hm2 : hash_map) :
   perm_eq hm1 hm2 -> 
   perm_eq (choose_part_kmap hm1) (choose_part_kmap hm2).
   Proof.
@@ -2934,16 +2901,16 @@ Lemma distinguished_mark (bn: B * nat) (hm : hash_map):
      (choose_part_kmap hm == [::]) = false.
   Proof. exact: choose_part_not_nil_kmap. Qed.
 
-  Definition template_kmap := @template disp I B L nat_inj cmp
-                                init_hash_kmap choose_part_kmap color_kmap color_refine_kmap
-                                mark_kmap_2 M_kmap markP_kmap color_refineP_kmap.
+  Definition template_kmap := @isocanonicalize disp I B L nat_inj cmp
+                                init_hash_kmap choose_part_kmap in_part_in_hm_kmap color_kmap
+                                mark_kmap_2 good_mark_kmap M_kmap markP_kmap color_refineP_kmap.
 
   Lemma uniq_kmap (g : rdf_graph I B L) : uniq (template_kmap g).
   Proof.
   apply (@uniq_template disp I B L nat_inj nat_inj_ cmp init_hash_kmap good_init_kmap
            init_hash_ubs_kmap choose_part_kmap in_part_in_hm_kmap color_kmap
-           color_refine_kmap color_good_hm_kmap color_ubs_kmap color_refine_good_hm_kmap
-           color_refine_ubs_kmap mark_kmap_2 good_mark_kmap mark_ubs_kmap M_kmap
+           color_good_hm_kmap color_ubs_kmap 
+           mark_kmap_2 good_mark_kmap mark_ubs_kmap M_kmap
            markP_kmap color_refineP_kmap).
   by case: g.
   Qed.
@@ -2957,10 +2924,8 @@ Lemma distinguished_mark (bn: B * nat) (hm : hash_map):
             can_extremum init_hash_kmap good_init_kmap init_hash_inj_rel_kmap init_hash_perm_graph_kmap
             init_hash_ubs_kmap choose_part_kmap choose_part_kmap_order
             choose_part_kmap_post_relabeling in_part_in_hm_kmap choose_from_not_fine_kmap
-            color_kmap color_refine_kmap color_good_hm_kmap color_post_relabeling_kmap
+            color_kmap color_good_hm_kmap color_post_relabeling_kmap
             color_perm_graph_kmap color_perm_hm_kmap color_ubs_kmap
-            color_refine_good_hm_kmap color_refine_post_relabeling_kmap
-            color_refine_perm_graph_kmap color_refine_perm_hm_kmap color_refine_ubs_kmap
             mark_kmap_2 good_mark_kmap mark_post_rel_kmap mark_perm_hm_kmap mark_ubs_kmap
             M_kmap markP_kmap color_refineP_kmap).
   Qed.
