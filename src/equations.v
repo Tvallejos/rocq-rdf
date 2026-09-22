@@ -1780,10 +1780,9 @@ Definition distinguish_ (g : seq (triple I B L)) (hm : hash_map) : seq (triple I
     (n : nat):
     forall hm : hash_map,
     is_fine (gen_partition hm) = false ->
-    (* hash_map_for g hm -> *)
     M hm < n ->
-    (* uniq (bnodes_hm hm) -> *)
-    perm_eq (bnodes_hm hm) (get_bts g) -> distinguish g hm == distinguish (relabeling_seq_triple mu g) (map1 mu hm).
+    perm_eq (bnodes_hm hm) (get_bts g) ->
+    distinguish g hm == distinguish (relabeling_seq_triple mu g) (map1 mu hm).
     Proof.
       elim: n => [//| n' IHn hm] hfine measure ghm_f.
       have mem_eq_bs := perm_mem ghm_f.
@@ -1805,256 +1804,250 @@ Definition distinguish_ (g : seq (triple I B L)) (hm : hash_map) : seq (triple I
         by rewrite !foldl_idx (eq_big_idem _ _ choose_graph_idem mem_eq_cands) eqxx.
       rewrite /cang/canh.
       rewrite choose_part_post_relabeling.
-      set pp := map1 _ _.
-      rewrite map1_map -map_comp {}/pp.
+      set pp := map1 _ _; rewrite map1_map -map_comp {}/pp.
       set can_g := canonicalize _ _.
       set can_h := canonicalize _ _.
       suffices -> :
         [seq can_g i | i <- choose_part hm] = [seq ((can_h) \o (fun p => (mu p.1, p.2))) i | i <-  choose_part hm] by [].
-      suffices step (bn : B * nat) : bn \in choose_part hm -> can_g bn = can_h (mu bn.1, bn.2) by apply/eq_in_map.
-        rewrite /can_g /can_h /canonicalize/template => hb /=.
-        set hmg := (X in is_fine (gen_partition X)).
-        set test_g := is_fine _.
-        set hmh := (X in is_fine (gen_partition X)).
-        set test_h := is_fine _.
-        have -> : test_h = test_g.
-         suffices /perm_hash_eq_fine : (perm_eq (hashes_hm hmg) (hashes_hm hmh)).
-           by rewrite /test_g => ->.
-         rewrite /hmh -(hashes_of_map1 hmg mu); apply perm_map.
-         have /(perm_trans _) -> // : perm_eq (color (relabeling_seq_triple mu g) (mark (mu bn.1) (map1 mu hm))) hmh.
-           apply color_perm_hm2; apply mark_perm_hm=> //.
-           rewrite map1_bnodesC map_f //; exact: in_part_in_bnodes.
-         have /(perm_trans _) -> //: perm_eq (color (relabeling_seq_triple mu g) (map1 mu (mark bn.1 hm))) (color (relabeling_seq_triple mu g) (mark (mu bn.1) (map1 mu hm))).
-           apply color_perm_hm2; rewrite perm_sym.
-           have H := in_part_in_bnodes _ _ hb.
-           by apply (mark_post_rel _ _ H)=> b1 b2; rewrite !mem_eq_bs; apply mu_inj.
-         have mu_inj_mhm: {in bnodes_hm (mark bn.1 hm) &, injective mu}.
-           by move=> b1 b2; rewrite !(good_mark mem_eq_bs) // ?in_part_in_bnodes //; apply mu_inj.
-         by rewrite /hmg perm_sym; apply color_post_rel=> //.
-        case: ifP => [htest | hNtest].
-        have ubs_hmg : (uniq (bnodes_hm hmg)).
-            apply color_ubs.
-            apply mark_ubs=> //.
-            by apply in_part_in_bnodes.
-        have hmg_inj : {in get_bts g &, injective (color g (mark bn.1 hm))}.
-            move=> b1 b2 bin1 bin2.
-          have eq_bs: hash_map_for g (color g (mark bn.1 hm)).
-            by apply color_good_hm; apply good_mark; [apply mem_eq_bs | apply in_part_in_bnodes].
-          have hm_inj := funof_snd_inj eq_bs htest.
-          rewrite !simpl_fun_of_hm ?eq_bs //.
-          rewrite -/hmg.
-          move=> /nat_inj_.
-          have -> : b1 = (b1,nth 0 [seq i.2 | i <- hmg] (index b1 (bnodes_hm hmg))).1 by [].
-          have -> : b2 = (b2,nth 0 [seq i.2 | i <- hmg] (index b2 (bnodes_hm hmg))).1 by [].
-          suffices SU : forall (T U : eqType)(hm : seq (T * U)), uniq hm -> forall (t : T), t \in map fst hm ->
-                                                                                                  forall (u : U),
-                                                                                                    (t,(nth u (map snd hm) (index t (map fst hm)))) \in hm.
+      suffices : forall (bn : B * nat), bn \in choose_part hm -> can_g bn = can_h (mu bn.1, bn.2).
+        by move=> bn; apply/eq_in_map.
+      rewrite /can_g /can_h /canonicalize/template => bn hb /=.
+      set hmg := (X in is_fine (gen_partition X)).
+      set test_g := is_fine _.
+      set hmh := (X in is_fine (gen_partition X)).
+      set test_h := is_fine _.
+      have -> : test_h = test_g.
+        (* rewrite /test_h/test_g. *)
+        (* rewrite /hmh /hmg. *)
+        (* symmetry. *)
+        (* eapply iso_color_finePP. *)
+        (* apply ts_pre_iso_effective_iso=> //. *)
+        (* rewrite /is_pre_iso_ts. *)
+        (* rewrite /bnode_map_bij. *)
+        suffices /perm_hash_eq_fine : (perm_eq (hashes_hm hmg) (hashes_hm hmh)).
+          by rewrite /test_g => ->.
+        rewrite /hmh -(hashes_of_map1 hmg mu); apply perm_map.
+        have /(perm_trans _) -> // : perm_eq (color (relabeling_seq_triple mu g) (mark (mu bn.1) (map1 mu hm))) hmh.
+          apply color_perm_hm2; apply mark_perm_hm=> //.
+          rewrite map1_bnodesC map_f //; exact: in_part_in_bnodes.
+        have /(perm_trans _) -> //: perm_eq (color (relabeling_seq_triple mu g) (map1 mu (mark bn.1 hm))) (color (relabeling_seq_triple mu g) (mark (mu bn.1) (map1 mu hm))).
+          apply color_perm_hm2; rewrite perm_sym.
+          have H := in_part_in_bnodes _ _ hb.
+          by apply (mark_post_rel _ _ H)=> b1 b2; rewrite !mem_eq_bs; apply mu_inj.
+        have mu_inj_mhm: {in bnodes_hm (mark bn.1 hm) &, injective mu}.
+          by move=> b1 b2; rewrite !(good_mark mem_eq_bs) // ?in_part_in_bnodes //; apply mu_inj.
+        by rewrite /hmg perm_sym; apply color_post_rel=> //.
+      case: ifP => [htest | hNtest].
+      have ubs_hmg : (uniq (bnodes_hm hmg)).
+          apply color_ubs.
+          apply mark_ubs=> //.
+          by apply in_part_in_bnodes.
+      have hmg_inj : {in get_bts g &, injective (color g (mark bn.1 hm))}.
+        move=> b1 b2 bin1 bin2.
+        have eq_bs: hash_map_for g (color g (mark bn.1 hm)).
+          by apply color_good_hm; apply good_mark; [apply mem_eq_bs | apply in_part_in_bnodes].
+        have hm_inj := funof_snd_inj eq_bs htest.
+        rewrite !simpl_fun_of_hm ?eq_bs // -/hmg=> /nat_inj_.
+        have -> : b1 = (b1,nth 0 [seq i.2 | i <- hmg] (index b1 (bnodes_hm hmg))).1 by [].
+        have -> : b2 = (b2,nth 0 [seq i.2 | i <- hmg] (index b2 (bnodes_hm hmg))).1 by [].
+        suffices SU : forall (T U : eqType)(hm : seq (T * U)), uniq hm -> forall (t : T), t \in map fst hm ->
+                                                                                                forall (u : U),
+                                                                                                  (t,(nth u (map snd hm) (index t (map fst hm)))) \in hm.
           have H: (b1, nth 0 [seq i.2 | i <- hmg] (index b1 (bnodes_hm hmg))) \in hmg.
             apply SU; last by rewrite eq_bs.
             by rewrite (hm_zip hmg); apply zip_uniq_l.
           have H2: (b2, nth 0 [seq i.2 | i <- hmg] (index b2 (bnodes_hm hmg))) \in hmg.
             apply SU; last by rewrite eq_bs.
             by rewrite (hm_zip hmg); apply zip_uniq_l.
-          rewrite !in_hm //.
-          by move=> /(hm_inj)=> /(_ H H2) [->].
-          move=> T U tus utus t tin u.
-          move: tin utus.
-          elim: tus=> [//| [b' n''] tl IHtl] /=.
-          rewrite in_cons=> /orP[].
-          by move=> /eqP ->; rewrite eqxx /= in_cons eqxx.
-          case_eq (b' == t).
-          + by move=> /eqP ->; rewrite /= in_cons eqxx.
-          + move=> H tin /andP[nin utl]; rewrite in_cons.
-            suffices -> : ((t, nth u (n'' :: [seq i.2 | i <- tl]) (index t [seq i.1 | i <- tl]).+1) \in tl).
-              by rewrite orbT.
-            by apply IHtl=> //.
-        - apply /rdf_leP.
-          have in_hm_inj : {in bnodes_hm hm &, injective mu}.
-            by move=> b1 b2; rewrite !mem_eq_bs; apply mu_inj.
-          apply uniq_perm.
-          rewrite /test_g/hmg in htest.
+          by rewrite !in_hm // => /(hm_inj)=> /(_ H H2) [->].
+        move=> T U tus utus t tin u.
+        move: tin utus.
+        elim: tus=> [//| [b' n''] tl IHtl] /=.
+        rewrite in_cons=> /orP[].
+        by move=> /eqP ->; rewrite eqxx /= in_cons eqxx.
+        case: (boolP (b' == t))=> [/eqP ->| H tin /andP[nin utl]] /=.
+        + by rewrite in_cons eqxx.
+        + by rewrite in_cons IHtl // orbT.
+      apply /rdf_leP.
+      have in_hm_inj : {in bnodes_hm hm &, injective mu}.
+        by move=> b1 b2; rewrite !mem_eq_bs; apply mu_inj.
+      apply uniq_perm.
+      - (* uniq rel (color g mark bn hm) g*)
+        rewrite /test_g/hmg in htest.
+        apply /in_map_injP=> //.
+        by apply inj_get_bts_inj_ts.
+      - (* uniq rel (color (mu g) (mark (mu bn) (mu hm)) (mu g)*)
+        set cr := color _ _.
+        suffices : forall (hm p : hash_map),
+              uniq (bnodes_hm hm) ->
+              perm_eq hm p ->
+              {in (bnodes_hm hm), fun_of_hash_map hm =1 p}.
+          have ubs_cr : uniq (bnodes_hm cr).
+            have /eq_map eq_mapC : fst \o (fun p : B * nat => (mu p.1,p.2)) =1 mu \o fst.
+              by [].
+            have mu_inj_hm: {in [seq i.1 | i <- hm] &, injective mu}.
+              move=> b1 b2; rewrite !mem_eq_bs.
+              by apply mu_inj.
+            apply color_ubs; apply mark_ubs.
+            rewrite map1_map /bnodes_hm -map_comp.
+            rewrite eq_mapC map_comp.
+            rewrite map_inj_in_uniq //.
+            rewrite map1_map/bnodes_hm -map_comp eq_mapC map_comp.
+            by move/in_part_in_bnodes : hb=> /(map_f mu).
+          have peq_cr: perm_eq cr (map1 mu (color g (mark bn.1 hm))).
+            rewrite /cr.
+            have /(perm_trans) -> // : perm_eq (color (relabeling_seq_triple mu g) (mark (mu bn.1) (map1 mu hm))) (color (relabeling_seq_triple mu g) (map1 mu (mark bn.1 hm))).
+              apply color_perm_hm2.
+              have H := in_part_in_bnodes _ _ hb.
+              by apply (mark_post_rel _ _ H)=> b1 b2; rewrite !mem_eq_bs; apply mu_inj.
+            apply color_post_rel=> //.
+            move=> b1 b2.
+            rewrite !(good_mark mem_eq_bs) //. apply mu_inj.
+            by apply in_part_in_bnodes.
+            by apply in_part_in_bnodes.
+          move=> /(_ _ _ ubs_cr peq_cr) eq_hm.
           apply /in_map_injP=> //.
-          by apply inj_get_bts_inj_ts.
-        - set cr := color _ _.
-          suffices : forall (hm p : hash_map),
-                uniq (bnodes_hm hm) ->
-                perm_eq hm p ->
-                {in (bnodes_hm hm), fun_of_hash_map hm =1 p}.
-            have ubs_cr : uniq (bnodes_hm cr).
-              have /eq_map eq_mapC : fst \o (fun p : B * nat => (mu p.1,p.2)) =1 mu \o fst.
-                by [].
-              have mu_inj_hm: {in [seq i.1 | i <- hm] &, injective mu}.
-                move=> b1 b2; rewrite !mem_eq_bs.
-                by apply mu_inj.
-              apply color_ubs; apply mark_ubs.
-              rewrite map1_map /bnodes_hm -map_comp.
-              rewrite eq_mapC map_comp.
-              rewrite map_inj_in_uniq //.
-              rewrite map1_map/bnodes_hm -map_comp eq_mapC map_comp.
-              by move/in_part_in_bnodes : hb=> /(map_f mu).
-            have peq_cr: perm_eq cr (map1 mu (color g (mark bn.1 hm))).
-              rewrite /cr.
-              have /(perm_trans) -> // : perm_eq (color (relabeling_seq_triple mu g) (mark (mu bn.1) (map1 mu hm))) (color (relabeling_seq_triple mu g) (map1 mu (mark bn.1 hm))).
-                apply color_perm_hm2.
-                have H := in_part_in_bnodes _ _ hb.
-                by apply (mark_post_rel _ _ H)=> b1 b2; rewrite !mem_eq_bs; apply mu_inj.
-              apply color_post_rel=> //.
-              move=> b1 b2.
-              rewrite !(good_mark mem_eq_bs) //. apply mu_inj.
-              by apply in_part_in_bnodes.
-              by apply in_part_in_bnodes.
-            move=> /(_ _ _ ubs_cr peq_cr) eq_hm.
-            apply /in_map_injP=> //.
-            apply inj_get_bts_inj_ts.
-            move=> b1 b2 bin1 bin2.
-            rewrite /cr !eq_hm.
-            suffices /andP[/mapP /=[bb1 bb1in ->] /mapP/= [bb2 bb2in ->]]: (b1 \in (map mu (get_bts g))) && (b2 \in (map mu (get_bts g))).
-            have -> : map1 mu (color g (mark bn.1 hm)) (mu bb1) = (map1 mu (color g (mark bn.1 hm)) \o mu) bb1 by [].
-            have -> : map1 mu (color g (mark bn.1 hm)) (mu bb2) = (map1 mu (color g (mark bn.1 hm)) \o mu) bb2 by [].
-            have ghm : good_hash_map_for g hmg.
-              apply eq_mem_good_hm=> t; rewrite /hmg; apply color_good_hm.
-              by apply good_mark; [apply mem_eq_bs | apply in_part_in_bnodes].
-            rewrite !ghm //.
-            by move /hmg_inj=> /(_ bb1in bb2in) ->.
-            have := perm_refl (relabeling_seq_triple mu g).
-            move=> /peq_get_bts.
-            move=> /perm_eq_bts_relabel_inj_in=> /(_ mu_inj) peq_rel.
-            by rewrite !(perm_mem peq_rel); apply /andP; split.
-          rewrite color_good_hm //.
-          have H := in_part_in_bnodes _ _ hb.
-          have /perm_mem peq_mark:= mark_post_rel bn.1 hm H in_hm_inj.
-          move=> b. rewrite (eq_mem_map _ peq_mark).
-          rewrite map1_map -map_comp.
+          apply inj_get_bts_inj_ts.
+          move=> b1 b2 bin1 bin2.
+          rewrite /cr !eq_hm.
+          suffices /andP[/mapP /=[bb1 bb1in ->] /mapP/= [bb2 bb2in ->]]: (b1 \in (map mu (get_bts g))) && (b2 \in (map mu (get_bts g))).
+          have -> : map1 mu (color g (mark bn.1 hm)) (mu bb1) = (map1 mu (color g (mark bn.1 hm)) \o mu) bb1 by [].
+          have -> : map1 mu (color g (mark bn.1 hm)) (mu bb2) = (map1 mu (color g (mark bn.1 hm)) \o mu) bb2 by [].
+          have ghm : good_hash_map_for g hmg.
+            apply eq_mem_good_hm=> t; rewrite /hmg; apply color_good_hm.
+            by apply good_mark; [apply mem_eq_bs | apply in_part_in_bnodes].
+          rewrite !ghm //.
+          by move /hmg_inj=> /(_ bb1in bb2in) ->.
           have := perm_refl (relabeling_seq_triple mu g).
           move=> /peq_get_bts.
           move=> /perm_eq_bts_relabel_inj_in=> /(_ mu_inj) peq_rel.
-          rewrite -(perm_mem peq_rel).
-          have eq_bs_mark: hash_map_for g (mark bn.1 hm). by apply good_mark=> //; apply in_part_in_bnodes.
-          rewrite -(eq_mem_map _ eq_bs_mark) /bnodes_hm -map_comp.
-          by congr (in_mem b).
-          *
-          rewrite color_good_hm //.
-          have H := in_part_in_bnodes _ _ hb.
-          have /perm_mem peq_mark:= mark_post_rel bn.1 hm H in_hm_inj.
-          move=> b. rewrite (eq_mem_map _ peq_mark).
-          rewrite map1_map -map_comp.
-          have := perm_refl (relabeling_seq_triple mu g).
-          move=> /peq_get_bts.
-          move=> /perm_eq_bts_relabel_inj_in=> /(_ mu_inj) peq_rel.
-          rewrite -(perm_mem peq_rel).
-          have eq_bs_mark: hash_map_for g (mark bn.1 hm).
-            by apply good_mark=> //; apply in_part_in_bnodes.
-          rewrite -(eq_mem_map _ eq_bs_mark) /bnodes_hm -map_comp.
-          by congr (in_mem b).
-          by apply fun_of_hash_perm.
-          ++
-            rewrite relabeling_seq_triple_comp.
-            apply relabeling_ext_in.
-            apply eq_in_bs_ing.
-            have: perm_eq (color (relabeling_seq_triple mu g) (mark (mu bn.1) (map1 mu hm))) (color (relabeling_seq_triple mu g) (map1 mu (mark bn.1 hm))).
+          by rewrite !(perm_mem peq_rel); apply /andP; split.
+        rewrite color_good_hm //.
+        have H := in_part_in_bnodes _ _ hb.
+        have /perm_mem peq_mark:= mark_post_rel bn.1 hm H in_hm_inj.
+        move=> b. rewrite (eq_mem_map _ peq_mark).
+        rewrite map1_map -map_comp.
+        have := perm_refl (relabeling_seq_triple mu g).
+        move=> /peq_get_bts.
+        move=> /perm_eq_bts_relabel_inj_in=> /(_ mu_inj) peq_rel.
+        rewrite -(perm_mem peq_rel).
+        have eq_bs_mark: hash_map_for g (mark bn.1 hm). by apply good_mark=> //; apply in_part_in_bnodes.
+        rewrite -(eq_mem_map _ eq_bs_mark) /bnodes_hm -map_comp.
+        by congr (in_mem b).
+        *
+        rewrite color_good_hm //.
+        have H := in_part_in_bnodes _ _ hb.
+        have /perm_mem peq_mark:= mark_post_rel bn.1 hm H in_hm_inj.
+        move=> b. rewrite (eq_mem_map _ peq_mark).
+        rewrite map1_map -map_comp.
+        have := perm_refl (relabeling_seq_triple mu g).
+        move=> /peq_get_bts.
+        move=> /perm_eq_bts_relabel_inj_in=> /(_ mu_inj) peq_rel.
+        rewrite -(perm_mem peq_rel).
+        have eq_bs_mark: hash_map_for g (mark bn.1 hm).
+          by apply good_mark=> //; apply in_part_in_bnodes.
+        rewrite -(eq_mem_map _ eq_bs_mark) /bnodes_hm -map_comp.
+        by congr (in_mem b).
+        by apply fun_of_hash_perm.
+      - (* col g (mark bn hm) g =i col (mu g) (mark (mu bn) (mu hm)) (mu g) *)
+          rewrite relabeling_seq_triple_comp.
+          apply relabeling_ext_in.
+          apply eq_in_bs_ing.
+          have peq' : perm_eq (color (relabeling_seq_triple mu g) (mark (mu bn.1) (map1 mu hm))) (color (relabeling_seq_triple mu g) (map1 mu (mark bn.1 hm))).
             have H := in_part_in_bnodes _ _ hb.
             by apply color_perm_hm2; apply (mark_post_rel _ _ H) ; move=> b1 b2; rewrite !mem_eq_bs; apply mu_inj.
-            move=> peq' b1 b1in.
-            have eq_bs_cr : hash_map_for g (color g (mark bn.1 hm)).
-              by apply color_good_hm; apply good_mark=> //; apply in_part_in_bnodes.
-            rewrite /=.
-            suffices peq_cr : perm_eq (color (relabeling_seq_triple mu g) (mark (mu bn.1) (map1 mu hm))) (map1 mu (color g (mark bn.1 hm))).
-              rewrite (fun_of_hash_perm _ _ _ peq_cr).
-              have -> : map1 mu (color g (mark bn.1 hm)) (mu b1) = (map1 mu (color g (mark bn.1 hm)) \o mu) b1 by [].
-              by rewrite (@eq_mem_good_hm g (color g (mark bn.1 hm)) _).
-            rewrite /bnodes_hm.
-            move: peq_cr=> /(perm_map fst)/perm_uniq ->.
-            have /eq_map eq_mapC : fst \o (fun p : B * nat => (mu p.1,p.2)) =1 mu \o fst by [].
-            rewrite map1_map -map_comp eq_mapC map_comp.
-            apply /in_map_injP.
-            apply color_ubs. apply mark_ubs. done. by apply in_part_in_bnodes.
-            move=> b1' b2'. rewrite !eq_bs_cr. apply mu_inj.
-            rewrite (eq_mem_map _ (perm_mem peq_cr)) map1_map -map_comp.
-            have /eq_map eq_mapC : fst \o (fun p : B * nat => (mu p.1,p.2)) =1 mu \o fst.
-                by [].
-            rewrite eq_mapC.
-            rewrite map_comp.
-            move: b1in.
-            rewrite -eq_bs_cr.
-            by move=> /(map_f mu).
-            have /perm_trans -> //: perm_eq (color (relabeling_seq_triple mu g) (mark (mu bn.1) (map1 mu hm)))
-                     (color (relabeling_seq_triple mu g) (map1 mu (mark bn.1 hm))).
-              have H := in_part_in_bnodes _ _ hb.
-              by apply color_perm_hm2; apply (mark_post_rel _ _ H) => //.
-            apply color_post_relabeling=> //.
-              move=> b1' b2'.
-              suffices mem_bs_mark : (bnodes_hm (mark bn.1 hm)) =i bnodes_hm hm.
-                by rewrite !mem_bs_mark; apply in_hm_inj.
-              move=> bb; rewrite (good_mark mem_eq_bs) ?mem_eq_bs //.
-              by rewrite -mem_eq_bs; apply in_part_in_bnodes.
-        - set hh := mark _ _.
-          have peq_mark_post_rel : perm_eq (mark (mu bn.1) (map1 mu hm)) (map1 mu (mark bn.1 hm)).
+          move=> b1 b1in.
+          have eq_bs_cr /= : hash_map_for g (color g (mark bn.1 hm)).
+            by apply color_good_hm; apply good_mark=> //; apply in_part_in_bnodes.
+          suffices peq_cr : perm_eq (color (relabeling_seq_triple mu g) (mark (mu bn.1) (map1 mu hm))) (map1 mu (color g (mark bn.1 hm))).
+            rewrite (fun_of_hash_perm _ _ _ peq_cr).
+            ++ have -> : map1 mu (color g (mark bn.1 hm)) (mu b1) = (map1 mu (color g (mark bn.1 hm)) \o mu) b1 by [].
+                by rewrite (@eq_mem_good_hm g (color g (mark bn.1 hm)) _).
+            ++ rewrite /bnodes_hm.
+              move: peq_cr=> /(perm_map fst)/perm_uniq ->.
+              have /eq_map eq_mapC : fst \o (fun p : B * nat => (mu p.1,p.2)) =1 mu \o fst by [].
+              rewrite map1_map -map_comp eq_mapC map_comp.
+              apply /in_map_injP.
+              apply color_ubs. apply mark_ubs. done. by apply in_part_in_bnodes.
+              by move=> b1' b2'; rewrite !eq_bs_cr; apply mu_inj.
+            ++ rewrite (eq_mem_map _ (perm_mem peq_cr)) map1_map -map_comp.
+                have /eq_map eq_mapC : fst \o (fun p : B * nat => (mu p.1,p.2)) =1 mu \o fst.
+                    by [].
+                rewrite eq_mapC map_comp; move: b1in.
+                by rewrite -eq_bs_cr=> /(map_f mu).
+          have /perm_trans -> //: perm_eq (color (relabeling_seq_triple mu g) (mark (mu bn.1) (map1 mu hm)))
+                    (color (relabeling_seq_triple mu g) (map1 mu (mark bn.1 hm))).
             have H := in_part_in_bnodes _ _ hb.
-            by apply (mark_post_rel _ _ H) => b1 b2; rewrite !mem_eq_bs; apply mu_inj.
-          have /(color_perm_hm2 (relabeling_seq_triple mu g)) := peq_mark_post_rel.
-          have cr_ubs : uniq (bnodes_hm (color (relabeling_seq_triple mu g) (mark (mu bn.1) (map1 mu hm)))).
-            apply color_ubs. apply mark_ubs.
-            rewrite map1_map/bnodes_hm -map_comp.
+            by apply color_perm_hm2; apply (mark_post_rel _ _ H) => //.
+          apply color_post_relabeling=> // b1' b2'.
+          suffices mem_bs_mark : (bnodes_hm (mark bn.1 hm)) =i bnodes_hm hm.
+            by rewrite !mem_bs_mark; apply in_hm_inj.
+          move=> bb; rewrite (good_mark mem_eq_bs) ?mem_eq_bs //.
+          by rewrite -mem_eq_bs; apply in_part_in_bnodes.
+            (* end of ifP line 1834 *)
+      - set hh := mark _ _.
+        have peq_mark_post_rel : perm_eq (mark (mu bn.1) (map1 mu hm)) (map1 mu (mark bn.1 hm)).
+          have H := in_part_in_bnodes _ _ hb.
+          by apply (mark_post_rel _ _ H) => b1 b2; rewrite !mem_eq_bs; apply mu_inj.
+        have /(color_perm_hm2 (relabeling_seq_triple mu g)) := peq_mark_post_rel.
+        have cr_ubs : uniq (bnodes_hm (color (relabeling_seq_triple mu g) (mark (mu bn.1) (map1 mu hm)))).
+          apply color_ubs; apply mark_ubs.
+          + rewrite map1_map/bnodes_hm -map_comp.
             have /eq_map eq_mapC : fst \o (fun p : B * nat => (mu p.1,p.2)) =1 mu \o fst.
               by [].
             rewrite eq_mapC map_comp.
-            apply /in_map_injP=> //.
-            have mu_inj_hm: {in [seq i.1 | i <- hm] &, injective mu}.
-                move=> b1 b2; rewrite !mem_eq_bs.
-                by apply mu_inj.
-            by [].
-            have /eq_map eq_mapC : fst \o (fun p : B * nat => (mu p.1,p.2)) =1 mu \o fst.
+            by apply /in_map_injP=> // b1 b2; rewrite !mem_eq_bs; apply mu_inj.
+          + have /eq_map eq_mapC : fst \o (fun p : B * nat => (mu p.1,p.2)) =1 mu \o fst.
               by [].
             rewrite map1_map/bnodes_hm -map_comp eq_mapC map_comp.
             by move/in_part_in_bnodes/(map_f mu) : hb.
-          have cr_mem_eq_bs : hash_map_for (relabeling_seq_triple mu g) (color (relabeling_seq_triple mu g) (mark (mu bn.1) (map1 mu hm))).
-            move=> b; rewrite color_good_hm //.
-            move=> b'; rewrite (@good_mark (relabeling_seq_triple mu g)) //.
-            rewrite /hash_map_for map1_map/bnodes_hm -map_comp.
+        have cr_mem_eq_bs : hash_map_for (relabeling_seq_triple mu g) (color (relabeling_seq_triple mu g) (mark (mu bn.1) (map1 mu hm))).
+          move=> b; rewrite color_good_hm //.
+          move=> b'; rewrite (@good_mark (relabeling_seq_triple mu g)) //.
+          + rewrite /hash_map_for map1_map/bnodes_hm -map_comp.
             have /eq_map eq_mapC : fst \o (fun p : B * nat => (mu p.1,p.2)) =1 mu \o fst.
               by [].
             rewrite eq_mapC map_comp=> b''.
             have /peq_get_bts/(perm_eq_bts_relabel_inj_in mu_inj) := perm_refl (relabeling_seq_triple mu g).
-            move=> /perm_mem <-.
-            by apply eq_mem_map.
-            rewrite map1_map/bnodes_hm -map_comp.
+            by move=> /perm_mem <-; apply eq_mem_map.
+          + rewrite map1_map/bnodes_hm -map_comp.
             have /eq_map eq_mapC : fst \o (fun p : B * nat => (mu p.1,p.2)) =1 mu \o fst.
               by [].
             rewrite eq_mapC map_comp.
             by move/in_part_in_bnodes/(map_f mu) : hb.
-            have side1 : ~~ is_fine (gen_partition (color (relabeling_seq_triple mu g) (mark (mu bn.1) (map1 mu hm)))).
-            suff/perm_hash_eq_fine-> : perm_eq (hashes_hm hmh) (hashes_hm hmg) by rewrite -/test_g hNtest.
-            rewrite -(hashes_of_map1 hmg mu).
-            apply: perm_map.
-            have trans_l : perm_eq hmh (color (relabeling_seq_triple mu g) (map1 mu (mark bn.1 hm))).
-              apply: color_perm_hm2; apply: mark_post_rel; first by apply in_part_in_bnodes.
-              move=> b1 b2. rewrite !mem_eq_bs. exact: mu_inj.
-            apply: (perm_trans trans_l).
-            apply: color_post_rel => //.
-            move=> b1 b2. rewrite !(good_mark mem_eq_bs) ?in_part_in_bnodes //; exact: mu_inj.
-          move=> /(distinguish_perm_hm _ _ _) -> //.
-          have peq_cr_post_rel : perm_eq (color (relabeling_seq_triple mu g) (map1 mu (mark bn.1 hm))) (map1 mu (color g (mark bn.1 hm))).
-            by apply color_post_rel=> // b1 b2; rewrite !(good_mark mem_eq_bs) // ?in_part_in_bnodes //; apply mu_inj.
-          have cr_post_ubs : uniq (bnodes_hm (color (relabeling_seq_triple mu g) (map1 mu (mark bn.1 hm)))).
-            move: peq_mark_post_rel. move=> /(color_perm_hm2 (relabeling_seq_triple mu g)).
-            by move=> /(perm_map fst) /perm_uniq <-.
-          have cr_post_eq_mem :
-            hash_map_for (relabeling_seq_triple mu g) (color (relabeling_seq_triple mu g) (map1 mu (mark bn.1 hm))).
-            move=> b; move: peq_mark_post_rel. move=> /(color_perm_hm2 (relabeling_seq_triple mu g)).
-            by move=> /(perm_map fst)/perm_mem <-.
-          have side2 : ~~ is_fine (gen_partition (color (relabeling_seq_triple mu g) (map1 mu (mark bn.1 hm)))).
-           suff/(perm_map snd)/perm_hash_eq_fine<- : perm_eq hmh (color (relabeling_seq_triple mu g) (map1 mu (mark bn.1 hm))) by [].
-           by apply: color_perm_hm2=> //.
-          have /(distinguish_perm_hm _ _ _ _) -> // := peq_cr_post_rel.
-          apply /eqP.
-          apply IHn=> //.
-          - eapply Order.POrderTheory.le_lt_trans.
-            * by apply colorP=> //; apply good_mark=> //; apply in_part_in_bnodes.
-            by apply: (Order.POrderTheory.lt_le_trans (markP _ hm _ ubs_hm hb) measure); by rewrite hfine.
-        + by apply still_good=> //; rewrite hfine //.
-        + by apply uniq_perm=> //; apply uniq_get_bts.
-        + by apply uniq_perm=> //; apply uniq_get_bts.
+        have side1 : ~~ is_fine (gen_partition (color (relabeling_seq_triple mu g) (mark (mu bn.1) (map1 mu hm)))).
+          suff/perm_hash_eq_fine-> : perm_eq (hashes_hm hmh) (hashes_hm hmg) by rewrite -/test_g hNtest.
+          rewrite -(hashes_of_map1 hmg mu); apply: perm_map.
+          have trans_l : perm_eq hmh (color (relabeling_seq_triple mu g) (map1 mu (mark bn.1 hm))).
+            apply: color_perm_hm2; apply: mark_post_rel; first by apply in_part_in_bnodes.
+            by move=> b1 b2; rewrite !mem_eq_bs; apply: mu_inj.
+          apply: (perm_trans trans_l).
+          apply: color_post_rel => //.
+          by move=> b1 b2; rewrite !(good_mark mem_eq_bs) ?in_part_in_bnodes //; apply: mu_inj.
+        move=> /(distinguish_perm_hm _ _ _) -> //.
+        have peq_cr_post_rel : perm_eq (color (relabeling_seq_triple mu g) (map1 mu (mark bn.1 hm))) (map1 mu (color g (mark bn.1 hm))).
+          by apply color_post_rel=> // b1 b2; rewrite !(good_mark mem_eq_bs) // ?in_part_in_bnodes //; apply mu_inj.
+        have cr_post_ubs : uniq (bnodes_hm (color (relabeling_seq_triple mu g) (map1 mu (mark bn.1 hm)))).
+          move: peq_mark_post_rel. move=> /(color_perm_hm2 (relabeling_seq_triple mu g)).
+          by move=> /(perm_map fst) /perm_uniq <-.
+        have cr_post_eq_mem :
+          hash_map_for (relabeling_seq_triple mu g) (color (relabeling_seq_triple mu g) (map1 mu (mark bn.1 hm))).
+          move=> b; move: peq_mark_post_rel. move=> /(color_perm_hm2 (relabeling_seq_triple mu g)).
+          by move=> /(perm_map fst)/perm_mem <-.
+        have side2 : ~~ is_fine (gen_partition (color (relabeling_seq_triple mu g) (map1 mu (mark bn.1 hm)))).
+          suff/(perm_map snd)/perm_hash_eq_fine<- : perm_eq hmh (color (relabeling_seq_triple mu g) (map1 mu (mark bn.1 hm))) by [].
+          by apply: color_perm_hm2=> //.
+        have /(distinguish_perm_hm _ _ _ _) -> // := peq_cr_post_rel.
+        apply /eqP.
+        apply IHn=> //.
+        - eapply Order.POrderTheory.le_lt_trans.
+          * by apply colorP=> //; apply good_mark=> //; apply in_part_in_bnodes.
+          by apply: (Order.POrderTheory.lt_le_trans (markP _ hm _ ubs_hm hb) measure); by rewrite hfine.
+      + by apply still_good=> //; rewrite hfine //.
+      + by apply uniq_perm=> //; apply uniq_get_bts.
+      + by apply uniq_perm=> //; apply uniq_get_bts.
      Qed.
+
 
     Lemma eiso_correct_complete (g h : seq (triple I B L)) (ug: uniq g) (uh: uniq h) :
       effective_iso_ts g h <-> (isocanonicalize g) == (isocanonicalize h).
