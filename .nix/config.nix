@@ -17,7 +17,7 @@
 
   ## Set this when the package has no rocqPackages version yet
   ## (either in nixpkgs or in .nix/rocq-overlays)
-  no-rocq-yet = true;
+  no-rocq-yet = false;
 
   ## If you want to select a different attribute (to build from the local sources as well)
   ## when calling `nix-shell` and `nix-build` without the `--argstr job` argument
@@ -34,7 +34,7 @@
   ## /!\ Remove this field as soon as the package is available on nixpkgs.
   ## /!\ Manual overlays in `.nix/rocq-overlays` or `.nix/coq-overlays`
   ##     should be preferred then.
-  buildInputs = [ "equations" "mathcomp-ssreflect" ];
+  buildInputs = [ "equations" "mathcomp-boot" "mathcomp-order" ];
 
   ## Indicate the relative location of your _CoqProject
   ## If not specified, it defaults to "_CoqProject"
@@ -55,9 +55,8 @@
     ## You can override Coq and other Coq coqPackages
     ## through the following attribute
     rocqPackages.rocq-core.override.version = "9.1";
-    coqPackages.coq.override.version = "9.1";
     # coqPackages.equations.override.version = "8.19.0";
-    coqPackages.mathcomp.override.version = "2.5.0";
+    rocqPackages.mathcomp.override.version = "2.6.0";
 
     ## In some cases, light overrides are not available/enough
     ## in which case you can use either
@@ -97,7 +96,7 @@
     ## reverse dependency of a job flagged as "main-job" (see above).
 
     ## Run on push on following branches (default [ "master" ])
-    push-branches = [ "main" "mc-2.4" "mc-2.5" ];
+    push-branches = [ "main" "mc-2.6" ];
   };
 
   ## Cachix caches to use in CI

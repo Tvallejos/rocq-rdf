@@ -1,5 +1,5 @@
 From HB Require Import structures.
-From mathcomp Require Import all_order all_boot.
+From mathcomp Require Import order boot.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
