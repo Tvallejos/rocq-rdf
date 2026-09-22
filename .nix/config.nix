@@ -54,8 +54,8 @@
 
     ## You can override Coq and other Coq coqPackages
     ## through the following attribute
-    rocqPackages.rocq-core.override.version = "9.0";
-    coqPackages.coq.override.version = "9.0";
+    rocqPackages.rocq-core.override.version = "9.1";
+    coqPackages.coq.override.version = "9.1";
     # coqPackages.equations.override.version = "8.19.0";
     coqPackages.mathcomp.override.version = "2.5.0";
 
