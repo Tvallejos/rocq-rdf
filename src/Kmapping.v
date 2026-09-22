@@ -1,4 +1,4 @@
-From mathcomp Require Import all_boot all_order.
+From mathcomp Require Import boot order.
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
@@ -97,7 +97,7 @@ Section Kmapping.
     suffices H2 : forall [S0 T0 : eqType] (x : S0) (y : T0) [s : seq S0] [t : seq T0] (i : nat),
         size s = size t -> nth (Bnode (mkHinput x y)) [seq Bnode (mkHinput an.1 an.2) | an <- zip s t ] i = Bnode (mkHinput (nth x s i) (nth y t i)).
       exists (index b bns).
-      rewrite H2; last by rewrite size_iota.
+      rewrite H2; first by rewrite size_iota.
       congr Bnode.
       rewrite H1 //; apply/eqP; rewrite eq_i_ch /=; apply /andP; split; apply/eqP.
       + by rewrite nth_index // permbs.
@@ -127,8 +127,8 @@ Section Kmapping.
     rewrite nth_zip // => /eqP; rewrite xpair_eqE=> /andP[/eqP y1nth /eqP y2nth].
     rewrite -x2nth -y2nth in eq2.
     rewrite -x1nth{x1nth} -x2nth{x2nth} -y1nth{y1nth} -y2nth{y2nth}.
-    move: eq2; rewrite (set_nth_default tagx2); last by rewrite -eqsize.
-    move=> /eqP; rewrite nth_uniq //; rewrite -?eqsize //; last by apply iota_uniq.
+    move: eq2; rewrite (set_nth_default tagx2); first by rewrite -eqsize.
+    move=> /eqP; rewrite nth_uniq //; rewrite -?eqsize //; first by apply iota_uniq.
     by move=> /eqP ->; apply/eqP; rewrite eq_i_ch /= eqxx andbC /= (set_nth_default tagx1) //.
   by move=> ?; apply minn_refl.
   Qed.
@@ -259,7 +259,7 @@ Section Kmapping.
     move=> u1 u2 /and3P[piso urel peq] ts3 p13.
     apply/and3P; split=> //.
     + rewrite/is_pre_iso_ts/bnode_map_bij !uniq_get_bts; apply uniq_perm=> [| |b].
-      * rewrite map_inj_in_uniq; first by rewrite uniq_get_bts.
+      * rewrite map_inj_in_uniq; last by rewrite uniq_get_bts.
         - by apply (is_pre_iso_ts_inj piso).
       * by rewrite uniq_get_bts.
       * move: piso=> /and3P [_ _ piso]; rewrite (perm_mem piso) /get_bts/get_bs.
@@ -366,7 +366,7 @@ Section Kmapping.
     Proof.
     move=> up mu_inj bin.
     have mub_in : mu b \in [seq mu i | i <- bs] by apply map_f.
-    rewrite (out_of_build bin up) out_of_build //; last by rewrite map_inj_in_uniq.
+    rewrite (out_of_build bin up) out_of_build //; first by rewrite map_inj_in_uniq.
     by congr nat_inj; rewrite !nth_iota ?index_mem // index_map_in.
     Qed.
 

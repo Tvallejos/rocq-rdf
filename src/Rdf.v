@@ -1,5 +1,5 @@
 From HB Require Import structures.
-From mathcomp Require Import all_order all_boot.
+From mathcomp Require Import order boot.
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
@@ -190,7 +190,7 @@ Section Rdf.
         {in ts, relabeling_triple mu1 =1  relabeling_triple mu2} ->
         relabeling_seq_triple mu1 ts =i relabeling_seq_triple mu2 ts.
       Proof. elim: ts => [//| tr tl ihtl].
-             move=> /= eq; rewrite eq; last by rewrite mem_head.
+             move=> /= eq; rewrite eq; first by rewrite mem_head.
              by move => ?; rewrite !in_cons ihtl // => x xin; apply eq; apply mem_cons.
       Qed.
 
@@ -1408,7 +1408,7 @@ Section Rdf.
           have isog1k1 : effective_iso g1 (M g1). by apply iso_output.
           have isog2k2 : effective_iso (M g2) g2. apply effective_iso_ts_sym=> //; first by case g2. apply iso_output.
           have umg1 : uniq (M g1). move: isog1k1=> [mu /and3P[piso _ peq ]].
-            rewrite -(perm_uniq peq). rewrite map_inj_in_uniq; first by case g1. apply inj_get_b_inj_g. apply (is_pre_iso_inj piso). 
+            rewrite -(perm_uniq peq). rewrite map_inj_in_uniq; last by case g1. apply inj_get_b_inj_g. apply (is_pre_iso_inj piso).
           move=> /(eq_effective_iso_ts umg1) peqm.
           have {}peqm: effective_iso_ts (M g1) (M g2) by exists id.
           apply: (effective_iso_ts_trans (effective_iso_ts_trans isog1k1 peqm) isog2k2).
@@ -1645,7 +1645,7 @@ Section Rdf.
     foldl join_st x l = x -> (l == [::]) || (x \in l).
   Proof.
   elim: l=> [//| hd t IHt] minimum.
-  rewrite /= join_st_def minimum; last by rewrite in_cons eqxx.
+  rewrite /= join_st_def minimum; first by rewrite in_cons eqxx.
   case: (foldl_max_st t hd).
   + by move=> -> ->; rewrite in_cons eqxx.
   + by move=> H <-; rewrite in_cons H orbT.
@@ -1873,8 +1873,8 @@ Section RDF_Spec.
   Proof.
   rewrite perm_sym=> mu_inj; apply perm_undup_map_inj.
   + move=> []trm1 []trm2 => //= /mem_bs_nodes; rewrite bnodes_map_get_bts.
-    rewrite mem_map; last by apply bnode_inj.
-    move=> trm1_in /mem_bs_nodes; rewrite bnodes_map_get_bts mem_map; last by apply bnode_inj.
+    rewrite mem_map; first by apply bnode_inj.
+    move=> trm1_in /mem_bs_nodes; rewrite bnodes_map_get_bts mem_map; first by apply bnode_inj.
     by move=> trm2_in [] /(mu_inj _ _ trm1_in trm2_in) ->.
   + by apply uniq_node_terms.
   + set T := node_terms (relabeling_seq_triple mu ts).

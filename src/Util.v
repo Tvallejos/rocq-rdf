@@ -1,5 +1,5 @@
 From HB Require Import structures.
-From mathcomp Require Import all_boot all_order.
+From mathcomp Require Import boot order.
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
@@ -92,9 +92,10 @@ Proof. move=> can. elim: s=>[//| h t IHts] /=. by rewrite can perm_cons IHts. Qe
 
 Lemma perm_map_in_cancel (T: eqType) (s : seq T) (f g: T -> T) :
   {in s, cancel f g} -> perm_eq (map (g \o f) s) s.
-Proof. elim: s=>[//| h t IHts] /=.
-       move=> can. rewrite can. rewrite perm_cons IHts //.
-       move=> x y. rewrite can //. by rewrite in_cons y orbT. by rewrite in_cons eqxx.
+Proof. elim: s=>[//| h t IHts] /= can.
+       rewrite can; first by rewrite in_cons eqxx.
+       rewrite perm_cons IHts //.
+       by move=> x y; rewrite can // in_cons y orbT.
 Qed.
 
 Lemma perm_undup_map_inj (T1 T2: eqType) (f : T1 -> T2) s1 s2 :
