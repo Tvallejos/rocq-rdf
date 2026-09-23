@@ -139,7 +139,7 @@ Proof. move=> d T l x minimum.
        by move=> H <-; rewrite in_cons H orbT.
 Qed.
 
-Lemma sizeO_filter T (s : seq T) p: size (filter p s) == 0 = all (negb \o p) s.
+Lemma sizeO_filter T (s : seq T) p: (size (filter p s) == 0) = all (negb \o p) s.
 Proof. by elim s=> //= h t <-; case (p h). Qed.
 
 Definition build_finfun (T : choiceType) (f : T -> T) (s : seq T) : (seq_sub s) -> T :=
@@ -154,11 +154,11 @@ Proof.
   elim : ts ss t s=> [|t' ts' IHts] /= ss t s; first by case: ss; rewrite in_nil.
   + case: ss=> [//|s' ss'].
     rewrite in_cons; case/orP; first by rewrite !in_cons xpair_eqE=> /andP [-> ->].
-    by rewrite in_cons=> /IHts/andP [-> ->]; rewrite !orbT. 
+    by rewrite !in_cons=> /IHts/andP [-> ->]; rewrite !orbT.
 Qed.
 
 Lemma in_zip_sym (S T : eqType) (ss : seq S) (ts : seq T) s t:
-  (s,t) \in zip ss ts = ((t, s) \in zip ts ss).
+  ((s,t) \in zip ss ts) = ((t, s) \in zip ts ss).
 Proof.
   elim: ts ss=> [[//|//]| t' ts' IHts] ss.
   + case: ss=> [| s' ss']; first by rewrite zip0s.

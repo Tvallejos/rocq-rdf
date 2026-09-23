@@ -50,7 +50,7 @@ End HashedData.
 (* Various transfers of structures *)
 HB.instance Definition _ (H T: eqType):= [Equality of hash H T by <: ].
 Lemma eq_i_ch (H T : eqType) (h1 h2: hash H T) :
-  h1 == h2 = ((input h1) == (input h2)) && ((current_hash h1) == (current_hash h2)).
+  (h1 == h2) = ((input h1) == (input h2)) && ((current_hash h1) == (current_hash h2)).
 Proof. by case h1; case h2. Qed.
 
 HB.instance Definition _ (H T: choiceType):= [Choice of hash H T by <: ].
@@ -66,7 +66,7 @@ Section IsoCan.
 
   Variable disp2 : Order.disp_t.
   Variable h : orderType disp2.
-  Local Notation hash := (hash h).
+  Local Abbreviation hash := (hash h).
 
   Variable h0 : h.
 

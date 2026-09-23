@@ -373,7 +373,7 @@ Lemma perm_hash_eq_fine (hm p : hash_map):
     Qed.
 
     Lemma bnodes_hm_index_size (hm : hash_map) (b : B) :
-    b \in bnodes_hm hm -> (index b (bnodes_hm hm) == size hm = false)%N.
+    b \in bnodes_hm hm -> ((index b (bnodes_hm hm) == size hm) = false)%N.
     Proof. by move/bnodes_hm_index_ltn/ltn_eqF. Qed.
 
     Lemma find_index_eq_bnode bs s (bn : B) :
@@ -484,7 +484,7 @@ Section Template.
   Variable disp : Order.disp_t.
   (* TODO : check that order is needed, since below comes a comparison comp on graphs *)
   Variable I B L : orderType disp.
-  Notation le_triple := (@le_triple disp I B L).
+  Abbreviation le_triple := (@le_triple disp I B L).
 
 
 (* Enumeration of b-nodes *)
@@ -550,9 +550,9 @@ Section Template.
       choose_graphC
       can_lid.
 
-  Local Notation hash_map := (hash_map B).
-  Local Notation part := (part B).
-  Local Notation partition := (partition B).
+  Local Abbreviation hash_map := (hash_map B).
+  Local Abbreviation part := (part B).
+  Local Abbreviation partition := (partition B).
 
   Arguments eq_hash {B} _ _.
   Arguments eq_bnode {B} _ _.
@@ -827,7 +827,7 @@ Lemma fun_of_hash_perm (hm p : hash_map) :
   (* if the partition is not fine, then choose_part yields a non empty sequence *)
   Hypothesis choose_from_not_fine :
     forall (hm : hash_map),
-      ~~ is_fine (gen_partition hm) -> choose_part hm == [::] = false.
+      ~~ is_fine (gen_partition hm) -> (choose_part hm == [::]) = false.
 
   Lemma in_part_in_bnodes (bn : B * nat) hm: bn \in choose_part hm -> bn.1 \in bnodes_hm hm.
   Proof.
@@ -1479,7 +1479,7 @@ Definition distinguish_ (g : seq (triple I B L)) (hm : hash_map) : seq (triple I
     apply eq_in_map => b bin.
     set i := index _ _.
     set s := map _ tl.
-    suffices -> : hd.1 == b = false.
+    suffices -> : (hd.1 == b) = false.
       by case: s.
     move: ubns=> /=/andP[/memPnC /(_ b bin)].
     by case: (hd.1 == b).
@@ -2142,7 +2142,7 @@ Section KmappingInstance.
 Variable disp : Order.disp_t.
 (* TODO : check that order is needed, since below comes a comparison comp on graphs *)
 Variable I B L : orderType disp.
-Notation le_triple := (@le_triple disp I B L).
+Abbreviation le_triple := (@le_triple disp I B L).
 
 Variable b_default : B.  
 
@@ -2176,10 +2176,10 @@ HB.instance Definition _ :=
     choose_graphC
     can_lid.
 
-Local Notation hash_map := (@hash_map B).
-Local Notation part := (@part B).
-Local Notation partition := (@partition B).
-Local Notation index_bnodes := (@index_bnodes disp B).
+Local Abbreviation hash_map := (@hash_map B).
+Local Abbreviation part := (@part B).
+Local Abbreviation partition := (@partition B).
+Local Abbreviation index_bnodes := (@index_bnodes disp B).
 
 Arguments eq_hash {B} _ _.
 Arguments eq_bnode {B} _ _.
