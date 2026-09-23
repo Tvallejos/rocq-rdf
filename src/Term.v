@@ -215,12 +215,12 @@ Section EqTerm.
   Definition get_bs (ts : seq (term I B L)) :=
     pmap get_b_term ts.
 
-  Lemma bnode_memP (b : B) trms : Bnode b \in trms = (b \in get_bs trms).
+  Lemma bnode_memP (b : B) trms : (Bnode b \in trms) = (b \in get_bs trms).
   Proof. elim: trms=> [//| h t' IHt].
          by case: h=> // ?; rewrite !in_cons IHt eqb_eq.
   Qed.
 
-  Lemma bnode_memPn (b : B) (trms : seq (term I B L)) : Bnode b \notin trms = (b \notin get_bs trms).
+  Lemma bnode_memPn (b : B) (trms : seq (term I B L)) : (Bnode b \notin trms) = (b \notin get_bs trms).
   Proof. by rewrite /negb bnode_memP. Qed.
 
   Lemma get_bs_of_uniq (s : seq (term I B L)) : uniq s -> get_bs (undup s) = get_bs s.

@@ -223,7 +223,7 @@ Section OperationsOnTriples.
   Canonical triple_predType (I' B' L' : eqType):= PredType (pred_of_seq \o (@terms_triple I' B' L')).
 
   Lemma mem_triple_terms (trm : term I B L) (t : triple I B L) :
-    trm \in t = [|| (trm == (subject t)),
+    (trm \in t) = [|| (trm == (subject t)),
         (trm == (predicate t)) |
         (trm == (object t))].
   Proof.
@@ -239,7 +239,7 @@ Section OperationsOnTriples.
   Definition bnodes_triple (t : triple I B L) : seq (term I B L) :=
     filter (@is_bnode I B L) (terms_triple t).
 
-  Lemma Obnodes_groundtriple t : size (bnodes_triple t) == 0 = is_ground_triple t.
+  Lemma Obnodes_groundtriple t : (size (bnodes_triple t) == 0) = is_ground_triple t.
   Proof. rewrite sizeO_filter /terms_triple -all_filter; case t=> s p o.
          rewrite filter_undup all_undup.
          by case: s; case: p; case: o.
@@ -257,10 +257,10 @@ Section OperationsOnTriples.
   Remark undup_bnodes_triple (t : triple I B L) : undup (bnodes_triple t) = bnodes_triple t.
   Proof. by case t=> ? ? ? ? ?; rewrite /bnodes_triple/terms_triple filter_undup undup_idem. Qed.
 
-  Lemma i_in_bnodes_triple id t : Iri id \in bnodes_triple t = false.
+  Lemma i_in_bnodes_triple id t : (Iri id \in bnodes_triple t) = false.
   Proof. by rewrite /bnodes_triple mem_filter. Qed.
 
-  Lemma l_in_bnodes_triple l t : Lit l \in bnodes_triple t = false.
+  Lemma l_in_bnodes_triple l t : (Lit l \in bnodes_triple t) = false.
   Proof. by rewrite /bnodes_triple mem_filter. Qed.
 
   Definition get_b_triple t : seq B.

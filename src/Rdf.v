@@ -377,10 +377,10 @@ Section Rdf.
         Proof. exact: undup_uniq. Qed.
         #[local] Hint Resolve uniq_bnodes_ts : core.
 
-        Lemma i_in_bnodes_ts id ts: Iri id \in bnodes_ts ts = false.
+        Lemma i_in_bnodes_ts id ts: (Iri id \in bnodes_ts ts) = false.
         Proof. by rewrite /bnodes_ts -filter_undup mem_filter. Qed.
 
-        Lemma l_in_bnodes_ts l ts: Lit l \in bnodes_ts ts = false.
+        Lemma l_in_bnodes_ts l ts: (Lit l \in bnodes_ts ts) = false.
         Proof. by rewrite /bnodes_ts -filter_undup mem_filter. Qed.
 
       Lemma bterms_ts b ts : Bnode b \in (terms_ts ts) -> Bnode b \in (bnodes_ts ts).
@@ -665,10 +665,10 @@ Section Rdf.
     Proof. exact: undup_uniq. Qed.
     #[local] Hint Resolve uniq_bnodes : core.
 
-    Lemma i_in_bnodes id g: Iri id \in bnodes g = false.
+    Lemma i_in_bnodes id g: (Iri id \in bnodes g) = false.
     Proof. by rewrite /bnodes i_in_bnodes_ts. Qed.
 
-    Lemma l_in_bnodes l g: Lit l \in bnodes g = false.
+    Lemma l_in_bnodes l g: (Lit l \in bnodes g) = false.
     Proof. by rewrite /bnodes l_in_bnodes_ts. Qed.
 
     Section BnodeRelabeling.
@@ -1492,7 +1492,7 @@ Section Rdf.
   Variables d : Order.disp_t.
   Variables I B L : orderType d.
 
-  Notation le_triple := (@le_triple d I B L).
+  Abbreviation le_triple := (@le_triple d I B L).
 
   Fixpoint le_st_fix (x y : seq (triple I B L)) :=
       match (x,y) with
@@ -1683,7 +1683,7 @@ Section OrderRdf.
   Variables d : Order.disp_t.
   Variables I B L : orderType d.
 
-  Notation le_triple := (@le_triple d I B L).
+  Abbreviation le_triple := (@le_triple d I B L).
 
   Definition le_rdf : rel (rdf_graph I B L) :=
     fun x y => le_st x y.

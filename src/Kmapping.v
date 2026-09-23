@@ -15,15 +15,15 @@ Section Kmapping.
   Hypothesis nat_inj : nat -> B.
   Hypothesis nat_inj_ : injective nat_inj.
 
-  Notation hn := (hash nat B).
-  Notation hterm := (term I hn L).
+  Abbreviation hn := (hash nat B).
+  Abbreviation hterm := (term I hn L).
   Definition HBnode p := @Bnode I hn L (mkHinput p.1 p.2).
 
-  Notation le_triple := (@le_triple disp I B L).
-  Notation join_st := (@join_st disp I B L).
-  Notation le_triple_total := (@le_triple_total _ I B L).
-  Notation le_triple_anti := (@le_triple_anti _ I B L).
-  Notation le_triple_trans := (@le_triple_trans _ I B L).
+  Abbreviation le_triple := (@le_triple disp I B L).
+  Abbreviation join_st := (@join_st disp I B L).
+  Abbreviation le_triple_total := (@le_triple_total _ I B L).
+  Abbreviation le_triple_anti := (@le_triple_anti _ I B L).
+  Abbreviation le_triple_trans := (@le_triple_trans _ I B L).
 
   Definition n0 := 0%N.
 

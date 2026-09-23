@@ -8,7 +8,7 @@ Development of the RDF model using Rocq and the Mathematical Components library.
 - Author(s):
   - Tomas Vallejos
   - Assia Mahboubi
-- Compatible Rocq versions: 9.1.0
+- Compatible Rocq versions: 9.2.0
 - Additional dependencies: 
   - the [`Mathematical Components` Library](https://github.com/math-comp/math-comp) version 2.6.0
   
