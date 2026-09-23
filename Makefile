@@ -26,7 +26,7 @@ invoke-coqmakefile: CoqMakefile
 docs:
 	rm -rf docs && mkdir docs 
 	rocq doc --html \
-	--coqlib_url https://rocq-prover.org/doc/V9.0.0/corelib \
+	--coqlib_url https://rocq-prover.org/doc/V9.2.0/corelib \
 	--external 'http://math-comp.github.io/htmldoc/' mathcomp  \
 	-d ./docs \
 	-R src/ RDF \
