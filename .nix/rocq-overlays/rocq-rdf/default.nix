@@ -4,12 +4,12 @@
 ## but the full doc is on nixos / nix packages website:
 ## https://nixos.org/manual/nixpkgs/stable/#sec-language-coq
 
-{ lib, mkCoqDerivation, which, coq
+{ lib, mkRocqDerivation, which, rocq-core, coq
   ## declare extra dependencies here, to be used in propagateBuildInputs e.g.
   , mathcomp, equations
   , version ? null }:
 
-with lib; mkCoqDerivation {
+with lib; mkRocqDerivation {
   pname = "rocq-rdf";
   ## you can configure the domain, owner and repository, the default are:
   # repo = "coq-rdf";
@@ -21,7 +21,7 @@ with lib; mkCoqDerivation {
 ## for local usage since it will be ignored locally if
 ## - this derivation corresponds to the main attribute,
 ## - or its version is overridden (by a branch, PR, url or path) in `.nix/config.nix`.
-  defaultVersion = with versions; switch coq.coq-version [
+  defaultVersion = with versions; switch rocq-core.rocq-version [
     ## Example of possible dependencies
     # { case = range "8.13" "8.14"; out = "1.2.0"; }
     ## other predicates are `isLe v`, `isLt v`, `isGe v`, `isGt v`, `isEq v` etc
@@ -40,7 +40,7 @@ with lib; mkCoqDerivation {
   ## - arbitrary nix packages (you need to require them at the beginning of the file)
   ## - Coq packages (require them at the beginning of the file)
   ## - OCaml packages (use `coq.ocamlPackages.xxx`, no need to require them at the beginning of the file)
-  propagatedBuildInputs = [ equations mathcomp.boot mathcomp.order ]; ## e.g. `= [ mathcomp coq-elpi ]`
+  propagatedBuildInputs = [ coq equations mathcomp.boot mathcomp.order ]; ## e.g. `= [ mathcomp coq-elpi ]`
 
   ## Does the package contain OCaml code?
   # mlPlugin = false;
