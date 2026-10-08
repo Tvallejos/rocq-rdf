@@ -2203,7 +2203,7 @@ Section RDF_Spec.
             by rewrite (l_id x tin).
   Qed.
 
-  Corollary iso_spec_sym (ts1 ts2 : seq (triple I B L)) :
+  Corollary spec_iso_sym (ts1 ts2 : seq (triple I B L)) :
     (uniq ts1) -> (uniq ts2) ->
       spec_iso ts1 ts2 -> spec_iso ts2 ts1.
   Proof.
