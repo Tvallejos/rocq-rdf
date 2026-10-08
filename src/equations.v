@@ -1421,18 +1421,9 @@ Definition distinguish_ (g : seq (triple I B L)) (hm : hash_map) : seq (triple I
     by move=> b; rewrite mem_sort.
     Qed.
 
-    Lemma preiso_uniq_im {ts1 ts2 : seq (triple I B L)} (ug1 : uniq ts1) (ug2 : uniq ts2) {mu : B -> B} :
-        is_pre_iso_ts ts1 ts2 mu ->
-        uniq [seq mu i | i <- get_bts ts1].
-    Proof.
-    move=> piso; rewrite map_inj_in_uniq; last by apply uniq_get_bts.
-    by apply (is_pre_iso_ts_inj piso).
-    Qed.
-
     Lemma eiso_out_template (g : seq (triple I B L)) (ug : uniq g) :
       effective_iso_ts g (isocanonicalize g).
     Proof.
-    rewrite /iso_ts.
     suffices [mu  [-> piso]]:
       exists mu, (isocanonicalize g) = sort le_triple (relabeling_seq_triple mu g)
             /\  uniq (map mu (get_bts g)).

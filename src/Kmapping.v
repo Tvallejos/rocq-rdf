@@ -278,7 +278,7 @@ Section Kmapping.
     Lemma kmapping_iso_out_ts ts (uts : uniq ts) : effective_iso_ts ts (k_mapping_ts ts).
     Proof.
     have := uniq_k_mapping_ts uts.
-    rewrite /iso_ts/is_iso_ts/k_mapping_ts.
+    rewrite /k_mapping_ts.
     case : (foldl_max_st (map (sort le_triple) (candidates ts)) [::]); first by move=> /k_mapping_nil_is_nil -> _; exists id.
     move=> /mapP/= [s /mapP[/= p pin ->] ->]; rewrite sort_uniq=> ukres.
     exists (kth_map p).
@@ -302,7 +302,7 @@ Section Kmapping.
     Lemma iso_structure (ts1 ts2: seq (triple I B L)) :
       effective_iso_ts ts1 ts2 -> ((ts1 == [::]) && (ts2 == [::]) || (ts1 != [::]) && (ts2 != [::])).
     Proof.
-    rewrite /iso_ts/is_iso_ts /=; move=> [? /and3P [_ _]] ; case: ts1=> [|h1 tl1].
+    move=> [? /and3P [_ _]] ; case: ts1=> [|h1 tl1].
     + by rewrite relabeling_seq_triple_nil perm_sym=> /perm_nilP ->.
     + by apply contraTneq=> -> ; apply /perm_nilP.
     Qed.
