@@ -1246,15 +1246,6 @@ Definition distinguish_ (g : seq (triple I B L)) (hm : hash_map) : seq (triple I
         by apply mem_eq_get_bts=> b'; rewrite mem_sort.
     Qed.
 
-    Lemma uniq_map_pre_iso (mu : B -> B) (ts : seq (triple I B L)) :
-      uniq (map mu (get_bts ts)) ->
-        is_pre_iso_ts ts (relabeling_seq_triple mu ts) mu.
-    Proof.
-    move=> umu; rewrite /is_pre_iso_ts/bnode_map_bij !uniq_get_bts /=.
-    apply perm_eq_bts_relabel_inj_in; last by apply perm_refl.
-    by apply /in_map_injP=> //; apply uniq_get_bts.
-    Qed.
-
     Lemma piso_funof (g : seq (triple I B L)) (hm: hash_map) :
       hash_map_for g hm ->
         is_fine (gen_partition hm) ->
@@ -1430,19 +1421,26 @@ Definition distinguish_ (g : seq (triple I B L)) (hm : hash_map) : seq (triple I
     by move=> b; rewrite mem_sort.
     Qed.
 
+    Lemma preiso_uniq_im {ts1 ts2 : seq (triple I B L)} (ug1 : uniq ts1) (ug2 : uniq ts2) {mu : B -> B} :
+        is_pre_iso_ts ts1 ts2 mu ->
+        uniq [seq mu i | i <- get_bts ts1].
+    Proof.
+    move=> piso; rewrite map_inj_in_uniq; last by apply uniq_get_bts.
+    by apply (is_pre_iso_ts_inj piso).
+    Qed.
+
     Lemma eiso_out_template (g : seq (triple I B L)) (ug : uniq g) :
       effective_iso_ts g (isocanonicalize g).
     Proof.
     rewrite /iso_ts.
-    move: (uniq_template g ug).
-    suffices [mu  [-> piso utg]]:
+    suffices [mu  [-> piso]]:
       exists mu, (isocanonicalize g) = sort le_triple (relabeling_seq_triple mu g)
-                 /\ is_pre_iso_ts g (isocanonicalize g) mu.
-      rewrite sort_uniq in utg.
+            /\  uniq (map mu (get_bts g)).
       exists mu; apply eiso_sort.
-      have {}piso : is_pre_iso_ts g (relabeling_seq_triple mu g) mu by apply piso_sort.
-      by move : (ts_pre_iso_effective_iso utg piso)=> eiso //.
-    by apply preiso_out_template.
+      by apply uniq_auto_piso.
+    have [mu [-> /piso_sort piso]]:= preiso_out_template g ug.
+    exists mu; split=> //.
+    by apply: (preiso_uniq_im _ (uniq_relabeling_pre_iso _ piso) piso).
     Qed.
 
     Lemma simpl_fun_of_hm (hm : hash_map):
@@ -2899,4 +2897,3 @@ Lemma distinguished_mark (bn: B * nat) (hm : hash_map):
   Qed.
 
 End KmappingInstance.
-

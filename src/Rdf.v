@@ -890,6 +890,14 @@ Section Rdf.
             uniq (relabeling_seq_triple mu ts).
         Proof. by rewrite /is_pre_iso_ts=> uts /is_pre_iso_ts_inj/inj_get_bts_inj_ts ?; rewrite map_inj_in_uniq //. Qed.
 
+        Lemma preiso_uniq_im {ts1 ts2 : seq (triple I B L)} (ug1 : uniq ts1) (ug2 : uniq ts2) {mu : B -> B} :
+            is_pre_iso_ts ts1 ts2 mu ->
+            uniq [seq mu i | i <- get_bts ts1].
+        Proof.
+        move=> piso; rewrite map_inj_in_uniq; last by apply uniq_get_bts.
+        by apply (is_pre_iso_ts_inj piso).
+        Qed.
+
       End PreIsomorphism.
 
 
@@ -1045,6 +1053,24 @@ Section Rdf.
           by apply /and3P; split=> //.
         move: perm_relab; rewrite perm_sym=> /(perm_map (relabeling_triple nu))=> perm_relab.
         by apply: perm_trans perm_relab _; rewrite relabeling_triple_map_comp map_id_in //.
+      Qed.
+      
+      Lemma uniq_map_pre_iso (mu : B -> B) (ts : seq (triple I B L)) :
+        uniq (map mu (get_bts ts)) ->
+          is_pre_iso_ts ts (relabeling_seq_triple mu ts) mu.
+      Proof.
+      move=> umu; rewrite /is_pre_iso_ts/bnode_map_bij !uniq_get_bts /=.
+      apply perm_eq_bts_relabel_inj_in; last by apply perm_refl.
+      by apply /in_map_injP=> //; apply uniq_get_bts.
+      Qed.
+
+      Lemma uniq_auto_piso : forall (ts : seq (triple I B L)) (uts : uniq ts) (mu : B -> B),
+          uniq (map mu (get_bts ts)) -> is_effective_iso_ts ts (relabeling_seq_triple mu ts) mu.
+      Proof.
+      move=> ts uts mu um.
+      have piso := uniq_map_pre_iso um.
+      apply /and3P; split=> //.
+      by apply uniq_relabeling_pre_iso.
       Qed.
 
       (* from every pair of pre isomorphisms from G to H and pre-iso from H to G *)
