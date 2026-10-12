@@ -24,7 +24,7 @@ We recommend installing the dependencies via [OPAM](https://opam.ocaml.org/doc/I
 ```sh
 git clone https://github.com/Tvallejos/rocq-rdf.git
 cd rocq-rdf
-opam switch create rocq-rdf 4.12.0
+opam switch create rocq-rdf 4.14.2
 eval $(opam env)
 opam remote add coq-released https://rocq-prover.org/opam/released
 opam install .
