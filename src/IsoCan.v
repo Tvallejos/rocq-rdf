@@ -92,6 +92,9 @@ Section IsoCan.
     Definition eqb_b_hterm (b : B) (ht : (term I (hash B) L)) : bool :=
       if ht is Bnode hb then b == (input hb) else false.
 
+    Definition eqb_b_ht (b : B) (ht : (hash B)) : bool :=
+        b == (input ht).
+
     Lemma eqb_b_hterm_is_bnode b (ht : hterm) : eqb_b_hterm b ht -> is_bnode ht.
     Proof. by case ht. Qed.
 

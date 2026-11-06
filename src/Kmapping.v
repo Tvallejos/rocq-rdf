@@ -360,7 +360,7 @@ Section Kmapping.
        and any map between blank nodes: mu which is locally injective in the domain: bs,
        for every blank node b in bs,
        (build_map_k bs b) assign the sames values as (build_map_k (map mu bs) (mu b)) *)
-    Lemma build_modulo_map (ts : seq (triple I B L)) b bs mu :
+    Lemma build_modulo_map b bs mu :
       uniq bs -> {in bs&, injective mu} -> b \in bs ->
         kth_map bs b = kth_map [seq mu i | i <- bs] (mu b).
     Proof.
@@ -404,7 +404,7 @@ Section Kmapping.
         have {}piso : is_pre_iso_ts ts1 ts2 mu. by apply /and3P; rewrite !uniq_get_bts.
           by move=> x y xin yin; apply (is_pre_iso_ts_inj2 piso); rewrite -(perm_mem pinperm).
         have up : uniq p by rewrite (perm_uniq pinperm) uniq_get_bts.
-        by move=> b; apply (build_modulo_map ts1 up mu_inj).
+        by move=> b; apply (build_modulo_map up mu_inj).
     Qed.
 
     (* For any pair of duplicate-free sequence of triples: ts1 and ts2,

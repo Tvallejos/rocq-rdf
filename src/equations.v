@@ -498,13 +498,19 @@ Section Template.
   Hypothesis cmp_anti : antisymmetric cmp.
   Hypothesis cmp_total : total cmp.
   Hypothesis cmp_trans : transitive cmp.
+  (* A default graph *)
+  Definition g0 : seq (triple I B L) := nil.
+  (* Determines a choice of default graph can *)
+  Hypothesis can_extremum : forall (x : seq (triple I B L)), cmp g0 x.
 
   Lemma cmp_refl (g : seq (triple I B L)) : cmp g g.
   Proof. by move: (cmp_total g g); move=> /orP[]. Qed.
 
   Definition choose_graph (g1 g2 : seq (triple I B L)) :=
     if cmp g1 g2 then g2 else g1.
+    (* if cmp (sort le_triple g1) (sort le_triple g2) then g2 else g1. *)
 
+  (* needs anti cmp \o sort le_triple*)
   Lemma choose_graphA : associative choose_graph.
   Proof.
   move=> g h i; rewrite /choose_graph.
@@ -513,12 +519,17 @@ Section Template.
   + by move=> ghn ->.
   + by move=> _ ->.
   + by move=> gh hi; rewrite (cmp_trans gh hi).
+  (* + by move=> gh hi; rewrite (cmp_trans _ _ _ gh hi). *)
   + by move=> _ ->.
   + by move=> _ ->.
   + move=> ghn gi hin _.
-    move: (cmp_total g h) (cmp_total h i); rewrite ghn hin /==> hg ih {ghn hin}.
+    (* move: (cmp_total (sort le_triple g) (sort le_triple h)) (cmp_total (sort le_triple h) (sort le_triple i)); *)
+    move: (cmp_total g h) (cmp_total h i);
+      rewrite ghn hin /==> hg ih {ghn hin}.
     have hi := (cmp_trans hg gi).
+    (* have hi := (cmp_trans _ _ _ hg gi). *)
     have eq_hi : h = i by apply cmp_anti; rewrite hi ih.
+    (* have eq_hi : sort le_triple h = sort le_triple i by apply cmp_anti; rewrite hi ih. *)
     by apply cmp_anti; rewrite gi -eq_hi hg.
   Qed.
 
@@ -533,12 +544,6 @@ Section Template.
   Proof.
   by move=> x; rewrite /choose_graph cmp_refl.
   Qed.
-
-  (* A default graph *)
-  Definition g0 : seq (triple I B L) := nil.
-
-  (* Determines a choice of default graph can *)
-  Hypothesis can_extremum : forall (x : seq (triple I B L)), cmp g0 x.
 
   Lemma can_lid : left_id g0 choose_graph.
   Proof. by move=> x; rewrite /choose_graph can_extremum. Qed.
@@ -608,11 +613,11 @@ Definition fun_of_hash_map (hm : hash_map) : B -> B :=
   by apply mu_inj; rewrite -hm_for_g.
   Qed.
 
-  Lemma inj_uniq_good_hm (hm : hash_map) (f: B -> B) (x : B) :
+  Lemma inj_uniq_good_hm (hm : hash_map) (mu: B -> B) (x : B) :
     forall g : seq (triple I B L), x \in get_bts g ->
                                     hash_map_for g hm ->
-                                    {in get_bts g &, injective f} ->
-                                    (fun_of_hash_map (map1 f hm)) (f x) = (fun_of_hash_map hm) x.
+                                    {in get_bts g &, injective mu} ->
+                                    (fun_of_hash_map (map1 mu hm)) (mu x) = (fun_of_hash_map hm) x.
   Proof.
   move=> g x_in hmf inj_f; apply shift_hm; first by rewrite hmf.
   by move=> x' y xin yin; apply inj_f; rewrite -hmf.
@@ -625,20 +630,20 @@ apply: (iffP idP) => /=.
 - by case=> k hbk; apply/mapP; exists (b, k).
 Qed.
 
-Lemma has_eq_bnodes (hm : seq (B * nat)) b : 
+Lemma has_eq_bnodes (hm : seq (B * nat)) b :
   has (eq_bnode b) hm = (b \in bnodes_hm hm).
 Proof.
 apply/hasP/mapP=> /= [] [] x hmx /eqP hx; exists x=> //.
 by move/eqP: hx=> ->; exact: eqxx.
 Qed.
 
-Lemma perm_eq_bnodes_hm (hm1 hm2 : seq (B * nat)) : 
+Lemma perm_eq_bnodes_hm (hm1 hm2 : seq (B * nat)) :
   perm_eq hm1 hm2 -> perm_eq (bnodes_hm hm1) (bnodes_hm hm2).
-Proof. by move=> e; rewrite /bnodes_hm; apply: perm_map. Qed. 
+Proof. by move=> e; rewrite /bnodes_hm; apply: perm_map. Qed.
 
 
 Lemma index_hashes (hm : seq (B * nat)) (b : B) (n : nat) :
-  (b, n) \in hm -> 
+  (b, n) \in hm ->
   uniq (hashes_hm hm) ->
   index (b, n) hm = index n (hashes_hm hm).
 Proof.
@@ -648,15 +653,15 @@ move=> u v uin vin e.
 pose i := index u hm.
 pose j := index v hm.
 suff eij : i = j by rewrite -(nth_index u uin) -(nth_index u vin) -/i eij.
-move/uniqP: huniq => /(_ u.2 i j). 
+move/uniqP: huniq => /(_ u.2 i j).
 rewrite size_map !inE !index_mem; apply=> //.
-rewrite (nth_map u) ?index_ltn // ?take_size //. 
+rewrite (nth_map u) ?index_ltn // ?take_size //.
 rewrite (nth_map v) ?index_ltn // ?take_size //.
 by rewrite !nth_index.
 Qed.
 
 Lemma index_bnodes {hm : seq (B * nat)} {b : B} {n : nat} :
-  (b, n) \in hm -> 
+  (b, n) \in hm ->
   uniq (bnodes_hm hm) ->
   index (b, n) hm = index b (bnodes_hm hm).
 Proof.
@@ -666,14 +671,14 @@ move=> /= u v uin vin e.
 pose i := index u hm.
 pose j := index v hm.
 suff eij : i = j by rewrite -(nth_index u uin) -(nth_index u vin) -/i eij.
-move/uniqP: huniq => /(_ u.1 i j). 
+move/uniqP: huniq => /(_ u.1 i j).
 rewrite size_map !inE !index_mem; apply=> //.
-rewrite (nth_map u) ?index_ltn // ?take_size //. 
+rewrite (nth_map u) ?index_ltn // ?take_size //.
 rewrite (nth_map v) ?index_ltn // ?take_size //.
 by rewrite !nth_index.
 Qed.
 
-Lemma uniq_bnode_hm (hm : seq (B * nat)) : uniq (bnodes_hm hm) -> 
+Lemma uniq_bnode_hm (hm : seq (B * nat)) : uniq (bnodes_hm hm) ->
   forall b n1 n2, (b, n1) \in hm -> (b, n2) \in hm -> n1 = n2.
 Proof.
 move=> /= hu b n1 n2 h1 h2.
@@ -684,7 +689,7 @@ suff e : index (b, n1) hm = index (b, n2) hm.
 by rewrite !index_bnodes.
 Qed.
 
-Lemma find_eq_bnode (hm : seq (B * nat)) b : 
+Lemma find_eq_bnode (hm : seq (B * nat)) b :
   find (eq_bnode b) hm = index b (bnodes_hm hm).
 Proof.
 (* move=> ubhm.*)
@@ -701,20 +706,20 @@ Lemma fun_of_hash_perm (hm p : hash_map) :
   set i := index _ _.
   set j := index _ _.
   have i_small : (i < size hm)%N.
-    have -> : size hm = size (bnodes_hm hm) by rewrite [RHS]size_map. 
-  by rewrite index_ltn ?take_size. 
+    have -> : size hm = size (bnodes_hm hm) by rewrite [RHS]size_map.
+  by rewrite index_ltn ?take_size.
   have j_small : (j < size p)%N.
-    have -> : size p = size (bnodes_hm p) by rewrite [RHS]size_map. 
+    have -> : size p = size (bnodes_hm p) by rewrite [RHS]size_map.
     rewrite index_ltn ?take_size //.
     by move/perm_eq_bnodes_hm/perm_mem: eq_hm_p=> <-.
-  rewrite  (ltn_eqF i_small) (ltn_eqF j_small). 
+  rewrite  (ltn_eqF i_small) (ltn_eqF j_small).
   suff -> : nth (b, 0) hm i = nth (b, 0) p j by [].
   set x := LHS; set y := RHS.
   case/bnodes_hmP: hmb=> k bkhm.
   have bkp : (b, k) \in p by rewrite  -(perm_mem eq_hm_p).
   have huniqp : uniq (bnodes_hm p).
     by move/perm_eq_bnodes_hm/perm_uniq : eq_hm_p<-.
-  rewrite /x -[i](index_bnodes bkhm)=> //. 
+  rewrite /x -[i](index_bnodes bkhm)=> //.
   rewrite /y -[j](index_bnodes bkp) //.
   by rewrite !nth_index.
   Qed.
@@ -731,13 +736,12 @@ Lemma fun_of_hash_perm (hm p : hash_map) :
     by rewrite -hm_zip; congr pair; rewrite nth_index.
     Qed.
 
-    Lemma funof_snd_inj (g : seq (triple I B L)) (hm : hash_map) :
-      hash_map_for g hm ->
+    Lemma funof_snd_inj {hm : hash_map} :
         is_fine (gen_partition hm) ->
           {in hm &, injective [eta snd]}.
     Proof.
     rewrite (hm_zip hm); set hm' := zip _ _.
-    move=> mem_eq fine uhm /= bn bn' bnin bn'in.
+    move=> fine uhm /= bn bn' bnin bn'in.
     eapply (zip_uniq_proj2 )=> //.
     + by apply is_fine_uniq; apply fine.
     + by symmetry; apply size_proj.
@@ -902,6 +906,15 @@ Lemma fun_of_hash_perm (hm p : hash_map) :
   move=> mu iso; apply: color_of_isoPP=> //; case/and3P: iso=> piso _ peq.
   apply: (perm_trans _ (init_hash_perm_graph _ _ peq)).
   by apply: init_hash_inj_rel; apply: (is_pre_iso_ts_inj piso).
+  Qed.
+
+  Lemma is_fine_agnostic {mu : B -> B} {hm : hash_map} :
+        {in (bnodes_hm hm)&, injective mu} ->
+      is_fine (gen_partition hm)
+      = is_fine (gen_partition (map1 mu hm)).
+  Proof.
+  move=> muinj; apply: perm_hash_eq_fine.
+  by rewrite hashes_of_map1.
   Qed.
 
   Lemma iso_color_finePP :
@@ -1829,7 +1842,7 @@ Definition distinguish_ (g : seq (triple I B L)) (hm : hash_map) : seq (triple I
         move=> b1 b2 bin1 bin2.
         have eq_bs: hash_map_for g (color g (mark bn.1 hm)).
           by apply color_good_hm; apply good_mark; [apply mem_eq_bs | apply in_part_in_bnodes].
-        have hm_inj := funof_snd_inj eq_bs htest.
+        have hm_inj := funof_snd_inj htest.
         rewrite !simpl_fun_of_hm ?eq_bs // -/hmg=> /nat_inj_.
         have -> : b1 = (b1,nth 0 [seq i.2 | i <- hmg] (index b1 (bnodes_hm hmg))).1 by [].
         have -> : b2 = (b2,nth 0 [seq i.2 | i <- hmg] (index b2 (bnodes_hm hmg))).1 by [].
